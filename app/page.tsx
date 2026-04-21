@@ -83,6 +83,7 @@ export default function Home() {
         provider: selectedProvider,
         leadId: newLeadId,
         jobTitle: leadData.jobTitle,
+        category: leadData.category,
       });
 
       setAnalysisResult(scoreResponse.data);

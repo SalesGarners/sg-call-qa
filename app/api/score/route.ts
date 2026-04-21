@@ -8,6 +8,7 @@ const scoreSchema = z.object({
   provider: z.enum(['groq', 'gemini', 'openai', 'claude']),
   leadId: z.string().optional(),
   jobTitle: z.string().optional(),
+  category: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -22,8 +23,9 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const { transcript, provider, leadId, jobTitle } = validation.data;
-    const result = await scoreCall(transcript, provider, jobTitle);
+    const { transcript, provider, leadId, jobTitle, category } = validation.data;
+    console.log(`[score] category=${category} provider=${provider}`);
+    const result = await scoreCall(transcript, provider, jobTitle, category);
 
     // Save results to database if leadId is provided
     if (leadId) {

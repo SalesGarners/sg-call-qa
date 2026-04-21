@@ -11,17 +11,18 @@ export const PROVIDERS: Record<string, AIProvider> = {
 export const scoreCall = async (
   transcript: string,
   provider: AIProvider,
-  jobTitle?: string
+  jobTitle?: string,
+  category?: string
 ): Promise<AnalysisResult> => {
   switch (provider) {
     case PROVIDERS.GROQ:
-      return await scoreWithGroq(transcript, jobTitle);
+      return await scoreWithGroq(transcript, jobTitle, category);
     case PROVIDERS.GEMINI:
-      return await scoreWithGemini(transcript, jobTitle);
+      return await scoreWithGemini(transcript, jobTitle, category);
     case PROVIDERS.OPENAI:
-      return await scoreWithOpenAI(transcript, jobTitle);
+      return await scoreWithOpenAI(transcript, jobTitle, category);
     case PROVIDERS.CLAUDE:
-      return await scoreWithClaude(transcript, jobTitle);
+      return await scoreWithClaude(transcript, jobTitle, category);
     default:
       throw new Error(`Unsupported AI provider: ${provider}`);
   }
