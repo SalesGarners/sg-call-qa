@@ -27,6 +27,8 @@ function parseReoonStatus(data: any): string {
   return labelMap[status] ?? `Unknown (${status})`;
 }
 
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -45,7 +47,7 @@ export async function POST(req: Request) {
         const params = { email, mode: 'quick', key: apiKey };
         console.log('[Reoon] Calling:', url, params);
 
-        const verifyRes = await axios.get(url, { params, timeout: 15000 });
+        const verifyRes = await axios.get(url, { params, timeout: 5000 });
         console.log('[Reoon] HTTP status:', verifyRes.status);
 
         const label = parseReoonStatus(verifyRes.data);
