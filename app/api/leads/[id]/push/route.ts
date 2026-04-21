@@ -4,12 +4,12 @@ import axios from 'axios';
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
-    const lead = db.lead.findUnique(id) as any;
+    const lead = await db.lead.findUnique(id) as any;
 
     if (!lead) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
@@ -43,7 +43,7 @@ export async function POST(
     );
 
     // Mark as pushed in local DB
-    db.lead.update(id, { status: 'PUSHED_TO_CRM' });
+    await db.lead.update(id, { status: 'PUSHED_TO_CRM' });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

@@ -230,7 +230,7 @@ const Step1_Upload: React.FC<Step1UploadProps> = ({
             <option value="groq">Groq (Llama 3.3 70B)</option>
             <option value="gemini">Gemini (Flash-Latest)</option>
             <option value="openai">OpenAI (GPT-4o Mini)</option>
-            <option value="claude">Claude (Sonnet 3.5)</option>
+            <option value="claude">Claude (Sonnet 4.6)</option>
           </select>
         </div>
       </div>
