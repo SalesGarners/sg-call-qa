@@ -1,0 +1,49 @@
+import mongoose, { Schema, Document, Model } from 'mongoose';
+
+export interface ILead extends Document {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  category: string;
+  employeeCount: string;
+  jobTitle?: string;
+  transcript?: string;
+  verdict?: 'QUALIFIED' | 'DISQUALIFIED' | null;
+  score?: number;
+  reasoning?: string;
+  status: 'PENDING' | 'ANALYZED' | 'PUSHED_TO_CRM';
+  emailStatus?: string;
+  emailStatusRaw?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const LeadSchema: Schema = new Schema({
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
+  email: { type: String, required: true },
+  phone: { type: String, required: true },
+  category: { type: String, required: true },
+  employeeCount: { type: String, required: true },
+  jobTitle: { type: String },
+  transcript: { type: String, default: '' },
+  verdict: { type: String, enum: ['QUALIFIED', 'DISQUALIFIED', null], default: null },
+  score: { type: Number, default: 0 },
+  reasoning: { type: String, default: '' },
+  status: { 
+    type: String, 
+    enum: ['PENDING', 'ANALYZED', 'PUSHED_TO_CRM'], 
+    default: 'PENDING' 
+  },
+  emailStatus: { type: String, default: null },
+  emailStatusRaw: { type: String, default: null },
+}, { 
+  timestamps: true, // Automatically adds createdAt and updatedAt
+  collection: 'Leads'
+});
+
+// For Next.js hot reloading: Prevents re-defining the model if it exists
+const Lead: Model<ILead> = mongoose.models.Lead || mongoose.model<ILead>('Lead', LeadSchema);
+
+export default Lead;

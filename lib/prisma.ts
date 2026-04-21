@@ -1,40 +1,17 @@
+import dbConnect from './mongodb';
+import Lead from './models/Lead';
+
 /**
- * Database client — talks to the local Express server via HTTP.
- * On Vercel: requests go through the ngrok tunnel to your machine.
- * Locally: requests go directly to localhost:4000.
- *
- * Required env vars:
- *   LOCAL_DB_URL     — ngrok URL in production, http://localhost:4000 in dev
- *   LOCAL_DB_SECRET  — shared secret to authenticate with the local server
+ * Database client — migrated to use MongoDB Atlas (via Mongoose).
+ * This bridge maintains the exact same API surface as the previous 
+ * local server, so no changes are needed in API routes.
  */
-
-const BASE_URL = process.env.LOCAL_DB_URL    || 'http://localhost:4000';
-const SECRET   = process.env.LOCAL_DB_SECRET || 'change-me-in-production';
-
-const headers = {
-  'Content-Type':  'application/json',
-  'x-api-secret':  SECRET,
-};
-
-async function request(method: string, path: string, body?: object) {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-    // Don't cache any DB calls
-    cache: 'no-store',
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Local DB ${method} ${path} → ${res.status}: ${text}`);
-  }
-
-  return res.json();
-}
 
 export const db = {
   lead: {
+    /**
+     * Create a new lead in MongoDB
+     */
     async create(data: {
       firstName: string;
       lastName: string;
@@ -44,9 +21,16 @@ export const db = {
       employeeCount: string;
       jobTitle?: string;
     }) {
-      return request('POST', '/leads', data);
+      await dbConnect();
+      const lead = await Lead.create(data);
+      // Convert to a plain object and replace _id with id for frontend consistency
+      const obj = lead.toObject();
+      return { ...obj, id: obj._id.toString() };
     },
 
+    /**
+     * Update an existing lead
+     */
     async update(id: string, data: Partial<{
       transcript:     string;
       verdict:        string;
@@ -56,19 +40,44 @@ export const db = {
       emailStatus:    string;
       emailStatusRaw: string;
     }>) {
-      return request('PATCH', `/leads/${id}`, data);
+      await dbConnect();
+      
+      // Map 'verdict' if needed (ensure it matches enum)
+      const updateData = { ...data };
+      
+      const lead = await Lead.findByIdAndUpdate(id, updateData, { new: true });
+      if (!lead) return null;
+      
+      const obj = lead.toObject();
+      return { ...obj, id: obj._id.toString() };
     },
 
+    /**
+     * Find a single lead by its ID
+     */
     async findUnique(id: string) {
+      await dbConnect();
       try {
-        return await request('GET', `/leads/${id}`);
-      } catch {
+        const lead = await Lead.findById(id);
+        if (!lead) return null;
+        
+        const obj = lead.toObject();
+        return { ...obj, id: obj._id.toString() };
+      } catch (err) {
         return null;
       }
     },
 
+    /**
+     * Get all leads sorted by newest first
+     */
     async findMany() {
-      return request('GET', '/leads');
+      await dbConnect();
+      const leads = await Lead.find({}).sort({ createdAt: -1 });
+      return leads.map(l => {
+        const obj = l.toObject();
+        return { ...obj, id: obj._id.toString() };
+      });
     },
   },
 };
