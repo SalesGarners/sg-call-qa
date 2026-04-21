@@ -1,0 +1,24 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Lead {
+  id            String   @id @default(cuid())
+  firstName     String
+  lastName      String
+  email         String
+  phone         String
+  category      String
+  employeeCount String
+  transcript    String   @default("")
+  verdict       String?
+  score         Int?
+  reasoning     String?
+  status        String   @default("PENDING") // PENDING, ANALYZED, PUSHED_TO_CRM
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
