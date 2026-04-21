@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import db from '@/lib/prisma';
+import db from '@/lib/db';
 import axios from 'axios';
 
 export async function POST(
@@ -8,7 +8,7 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    
+
     const lead = await db.lead.findUnique(id) as any;
 
     if (!lead) {
@@ -48,8 +48,8 @@ export async function POST(
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('HubSpot Push Error:', error);
-    return NextResponse.json({ 
-      error: error.response?.data?.message || 'Failed to push to CRM' 
+    return NextResponse.json({
+      error: error.response?.data?.message || 'Failed to push to CRM'
     }, { status: 500 });
   }
 }

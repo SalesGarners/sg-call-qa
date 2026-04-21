@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { scoreCall } from '@/lib/services/aiOrchestrator';
 import { z } from 'zod';
-import db from '@/lib/prisma';
+import db from '@/lib/db';
 
 const scoreSchema = z.object({
   transcript: z.string().min(10, "Transcript is too short"),
@@ -13,12 +13,12 @@ const scoreSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    
+
     const validation = scoreSchema.safeParse(body);
     if (!validation.success) {
-      return NextResponse.json({ 
-        error: 'Invalid request data', 
-        details: validation.error.format() 
+      return NextResponse.json({
+        error: 'Invalid request data',
+        details: validation.error.format()
       }, { status: 400 });
     }
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import db from '@/lib/prisma';
+import db from '@/lib/db';
 import axios from 'axios';
 
 // Reoon status field → human-readable label
@@ -12,16 +12,16 @@ function parseReoonStatus(data: any): string {
   console.log('[Reoon] Parsed status field:', status);
 
   const labelMap: Record<string, string> = {
-    valid:          'Valid',
-    invalid:        'Invalid',
-    safe_to_send:   'Safe to Send',
-    risky:          'Risky',
-    unknown:        'Unknown',
-    disposable:     'Disposable',
-    role_account:   'Role Account',
-    spamtrap:       'Spam Trap',
-    catch_all:      'Catch-All',
-    do_not_mail:    'Do Not Mail',
+    valid: 'Valid',
+    invalid: 'Invalid',
+    safe_to_send: 'Safe to Send',
+    risky: 'Risky',
+    unknown: 'Unknown',
+    disposable: 'Disposable',
+    role_account: 'Role Account',
+    spamtrap: 'Spam Trap',
+    catch_all: 'Catch-All',
+    do_not_mail: 'Do Not Mail',
   };
 
   return labelMap[status] ?? `Unknown (${status})`;
