@@ -15,6 +15,7 @@ const Step2_Processing: React.FC<Step2ProcessingProps> = ({ processingState, onR
   const isInitializing = type === 'initializing';
   const isTranscribing = type === 'transcribing';
   const isScoring = type === 'scoring';
+  const isSaving = type === 'saving';
 
   if (error) {
     return (
@@ -41,7 +42,7 @@ const Step2_Processing: React.FC<Step2ProcessingProps> = ({ processingState, onR
   return (
     <div className="card fade-in" style={styles.card}>
       <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '32px', textAlign: 'center' }}>
-        {isInitializing ? 'Saving lead information...' : 'Processing your call...'}
+        {isSaving ? 'Saving lead information...' : 'Processing your call...'}
       </h3>
 
       {/* Transcribing Progress */}
@@ -55,17 +56,17 @@ const Step2_Processing: React.FC<Step2ProcessingProps> = ({ processingState, onR
             1. Transcribing audio
           </span>
           <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-            {isTranscribing ? `${progress}%` : (isScoring ? 'Done' : (isInitializing ? 'Ready' : 'Waiting...'))}
+            {isTranscribing ? `${progress}%` : (isScoring || isSaving ? 'Done' : 'Waiting...')}
           </span>
         </div>
         <div style={styles.progressTrack}>
           <motion.div 
             initial={{ width: 0 }}
-            animate={{ width: type === 'transcribing' ? `${progress}%` : (isScoring ? '100%' : 0) }}
+            animate={{ width: type === 'transcribing' ? `${progress}%` : (isScoring || isSaving ? '100%' : 0) }}
             transition={{ duration: 0.5 }}
             style={{
               ...styles.progressBar,
-              backgroundColor: isScoring ? '#3B6D11' : 'var(--color-purple)',
+              backgroundColor: isScoring || isSaving ? '#3B6D11' : 'var(--color-purple)',
             }}
           />
         </div>
@@ -82,17 +83,17 @@ const Step2_Processing: React.FC<Step2ProcessingProps> = ({ processingState, onR
             2. Scoring with AI
           </span>
           <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-            {type === 'scoring' ? `${progress}%` : 'Waiting...'}
+            {type === 'scoring' ? `${progress}%` : (isSaving ? 'Done' : 'Waiting...')}
           </span>
         </div>
         <div style={styles.progressTrack}>
           <motion.div 
             initial={{ width: 0 }}
-            animate={{ width: type === 'scoring' ? `${progress}%` : 0 }}
+            animate={{ width: type === 'scoring' ? `${progress}%` : (isSaving ? '100%' : 0) }}
             transition={{ duration: 0.5 }}
             style={{
               ...styles.progressBar,
-              backgroundColor: 'var(--color-purple)',
+              backgroundColor: isSaving ? '#3B6D11' : 'var(--color-purple)',
             }}
           />
         </div>
@@ -104,7 +105,7 @@ const Step2_Processing: React.FC<Step2ProcessingProps> = ({ processingState, onR
         color: 'var(--color-text-muted)',
         marginTop: '32px'
       }}>
-        {isInitializing ? 'Securing your lead data in local storage...' : (isTranscribing ? 'Listening to the recording and identifying speakers...' : 'Analyzing the conversation for intent and fit...')}
+        {isSaving ? 'Securing your lead data in the database...' : (isTranscribing ? 'Listening to the recording and identifying speakers...' : 'Analyzing the conversation for intent and fit...')}
       </p>
 
       {onCancel && (

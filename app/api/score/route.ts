@@ -27,22 +27,6 @@ export async function POST(req: NextRequest) {
     console.log(`[score] category=${category} provider=${provider}`);
     const result = await scoreCall(transcript, provider, jobTitle, category);
 
-    // Save results to database if leadId is provided
-    if (leadId) {
-      try {
-        await db.lead.update(leadId, {
-          transcript,
-          verdict: result.verdict,
-          score: result.score,
-          reasoning: result.reasoning,
-          status: 'ANALYZED'
-        });
-      } catch (dbError) {
-        console.error('Failed to update lead results:', dbError);
-        // Still return the result even if DB update fails
-      }
-    }
-
     return NextResponse.json(result);
   } catch (error: any) {
     console.error('Scoring API Error:', error);

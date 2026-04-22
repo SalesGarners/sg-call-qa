@@ -32,10 +32,10 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { firstName, lastName, email, phone, category, employeeCount, jobTitle } = body;
+    const { firstName, lastName, email, phone, category, employeeCount, jobTitle, transcript, verdict, score, reasoning, status } = body;
 
     // 1. Create lead in DB (await required as lib/prisma uses fetch)
-    const lead = await db.lead.create({ firstName, lastName, email, phone, category, employeeCount, jobTitle }) as any;
+    const lead = await db.lead.create({ firstName, lastName, email, phone, category, employeeCount, jobTitle, transcript, verdict, score, reasoning, status: status || 'ANALYZED' }) as any;
 
     // 2. Verify email via Reoon — quick mode (~0.5s, no SMTP)
     const apiKey = process.env.REOON_API_KEY;

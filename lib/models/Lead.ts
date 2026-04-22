@@ -9,7 +9,7 @@ export interface ILead extends Document {
   employeeCount: string;
   jobTitle?: string;
   transcript?: string;
-  verdict?: 'QUALIFIED' | 'DISQUALIFIED' | null;
+  verdict?: 'Good to Go (SQL)' | 'Borderline' | 'Not Qualified' | null;
   score?: number;
   reasoning?: string;
   status: 'PENDING' | 'ANALYZED' | 'PUSHED_TO_CRM';
@@ -28,7 +28,7 @@ const LeadSchema: Schema = new Schema({
   employeeCount: { type: String, required: true },
   jobTitle: { type: String },
   transcript: { type: String, default: '' },
-  verdict: { type: String, enum: ['QUALIFIED', 'DISQUALIFIED', null], default: null },
+  verdict: { type: String, enum: ['Good to Go (SQL)', 'Borderline', 'Not Qualified', null], default: null },
   score: { type: Number, default: 0 },
   reasoning: { type: String, default: '' },
   status: { 

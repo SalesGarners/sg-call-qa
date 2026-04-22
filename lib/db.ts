@@ -20,6 +20,11 @@ export const db = {
       category: string;
       employeeCount: string;
       jobTitle?: string;
+      transcript?: string;
+      verdict?: string;
+      score?: number;
+      reasoning?: string;
+      status?: string;
     }) {
       await dbConnect();
       const lead = await Lead.create(data);

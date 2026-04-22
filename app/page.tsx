@@ -34,32 +34,19 @@ export default function Home() {
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
-  const currentLeadIdRef = useRef<string | null>(null);
-
   const handleCancelProcessing = async () => {
     // 1. Abort any ongoing network requests
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
-    // 2. Delete the created lead if it exists
-    const idToDelete = currentLeadIdRef.current;
-    if (idToDelete) {
-      try {
-        await axios.delete(`/api/leads/${idToDelete}`);
-      } catch (err) {
-        console.error('Failed to delete lead on cancel:', err);
-      }
-    }
-
-    // 3. Reset the application state
+    // 2. Reset the application state
     resetApp();
   };
 
   const handleStartAnalysis = async () => {
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
-    currentLeadIdRef.current = null;
 
     setCurrentStep(2);
     setProcessingState({ type: 'transcribing', progress: 0, error: null });
@@ -67,15 +54,7 @@ export default function Home() {
     let finalTranscript = '';
 
     try {
-      // 1. Create Lead Record
-      setProcessingState({ type: 'initializing', progress: 5, error: null });
-      const leadResponse = await axios.post('/api/leads', leadData, { signal });
-      const newLeadId = leadResponse.data.id;
-      currentLeadIdRef.current = newLeadId;
-      setLeadId(newLeadId);
-      setEmailStatus(leadResponse.data.emailStatus ?? null);
-
-      // 2. Transcribe
+      // 1. Transcribe
       if (useManualTranscript) {
         finalTranscript = manualTranscript;
         setTranscript(finalTranscript);
@@ -103,7 +82,7 @@ export default function Home() {
         setProcessingState({ type: 'transcribing', progress: 100, error: null });
       }
 
-      // 3. Transition to scoring
+      // 2. Transition to scoring
       await new Promise(resolve => setTimeout(resolve, 800));
       if (signal.aborted) return;
 
@@ -112,18 +91,33 @@ export default function Home() {
       const scoreResponse = await axios.post('/api/score', {
         transcript: finalTranscript,
         provider: selectedProvider,
-        leadId: newLeadId,
         jobTitle: leadData.jobTitle,
         category: leadData.category,
       }, { signal });
 
-      setAnalysisResult(scoreResponse.data);
+      const analysisData = scoreResponse.data;
+      setAnalysisResult(analysisData);
       setProcessingState({ type: 'scoring', progress: 100, error: null });
 
-      // Move to results
+      // 3. Save to Database
       await new Promise(resolve => setTimeout(resolve, 800));
       if (signal.aborted) return;
 
+      setProcessingState({ type: 'saving', progress: 100, error: null });
+      
+      const leadResponse = await axios.post('/api/leads', {
+        ...leadData,
+        transcript: finalTranscript,
+        verdict: analysisData.verdict,
+        score: analysisData.score,
+        reasoning: analysisData.reasoning,
+        status: 'ANALYZED'
+      }, { signal });
+      
+      setLeadId(leadResponse.data.id);
+      setEmailStatus(leadResponse.data.emailStatus ?? null);
+
+      // Move to results
       setCurrentStep(3);
     } catch (error: any) {
       if (axios.isCancel(error)) {
@@ -146,7 +140,6 @@ export default function Home() {
     setProcessingState({ type: '', progress: 0, error: null });
     setLeadId(null);
     setEmailStatus(null);
-    currentLeadIdRef.current = null;
   };
 
   return (

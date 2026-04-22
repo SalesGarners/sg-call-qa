@@ -13,7 +13,7 @@ export interface AnalysisResult {
 }
 
 export interface ProcessingState {
-  type: 'initializing' | 'transcribing' | 'scoring' | '';
+  type: 'initializing' | 'transcribing' | 'scoring' | 'saving' | '';
   progress: number;
   error: string | null;
 }
