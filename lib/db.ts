@@ -69,6 +69,21 @@ export const db = {
     },
 
     /**
+     * Delete a lead by its ID
+     */
+    async delete(id: string) {
+      await dbConnect();
+      try {
+        const lead = await Lead.findByIdAndDelete(id);
+        if (!lead) return null;
+        const obj = lead.toObject();
+        return { ...obj, id: obj._id.toString() };
+      } catch (err) {
+        return null;
+      }
+    },
+
+    /**
      * Get all leads sorted by newest first
      */
     async findMany() {

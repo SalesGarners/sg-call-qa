@@ -3,6 +3,7 @@ import { Check } from 'lucide-react';
 
 interface StepIndicatorProps {
   currentStep: number;
+  onStepClick?: (step: number) => void;
 }
 
 const steps = [
@@ -12,7 +13,7 @@ const steps = [
   { id: 4, name: 'Results' },
 ];
 
-const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {
+const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, onStepClick }) => {
   // Normalize currentStep for the 4 logic steps vs 3 UI screens
   // 1: Upload, 2: Transcribing/Scoring, 3: Results
   const activeStep = currentStep === 3 ? 4 : currentStep;
@@ -22,10 +23,22 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {
       {steps.map((step, index) => {
         const isCompleted = activeStep > step.id;
         const isActive = activeStep === step.id;
+        const isClickable = step.id === 1 && currentStep > 1 && onStepClick;
         
         return (
           <React.Fragment key={step.id}>
-            <div style={styles.stepWrapper}>
+            <div 
+              style={{
+                ...styles.stepWrapper,
+                cursor: isClickable ? 'pointer' : 'default',
+                opacity: isClickable ? 0.8 : 1,
+              }}
+              onClick={() => {
+                if (isClickable && onStepClick) {
+                  onStepClick(step.id);
+                }
+              }}
+            >
               <div 
                 style={{
                   ...styles.circle,

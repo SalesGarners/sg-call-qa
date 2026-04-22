@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import StepIndicator from '@/components/StepIndicator';
 import Step1_Upload from '@/components/Step1_Upload';
@@ -33,7 +33,34 @@ export default function Home() {
     error: null,
   });
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const currentLeadIdRef = useRef<string | null>(null);
+
+  const handleCancelProcessing = async () => {
+    // 1. Abort any ongoing network requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // 2. Delete the created lead if it exists
+    const idToDelete = currentLeadIdRef.current;
+    if (idToDelete) {
+      try {
+        await axios.delete(`/api/leads/${idToDelete}`);
+      } catch (err) {
+        console.error('Failed to delete lead on cancel:', err);
+      }
+    }
+
+    // 3. Reset the application state
+    resetApp();
+  };
+
   const handleStartAnalysis = async () => {
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+    currentLeadIdRef.current = null;
+
     setCurrentStep(2);
     setProcessingState({ type: 'transcribing', progress: 0, error: null });
 
@@ -42,8 +69,9 @@ export default function Home() {
     try {
       // 1. Create Lead Record
       setProcessingState({ type: 'initializing', progress: 5, error: null });
-      const leadResponse = await axios.post('/api/leads', leadData);
+      const leadResponse = await axios.post('/api/leads', leadData, { signal });
       const newLeadId = leadResponse.data.id;
+      currentLeadIdRef.current = newLeadId;
       setLeadId(newLeadId);
       setEmailStatus(leadResponse.data.emailStatus ?? null);
 
@@ -61,6 +89,7 @@ export default function Home() {
 
         const transResponse = await axios.post('/api/transcribe', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
+          signal,
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
               const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -76,6 +105,8 @@ export default function Home() {
 
       // 3. Transition to scoring
       await new Promise(resolve => setTimeout(resolve, 800));
+      if (signal.aborted) return;
+
       setProcessingState({ type: 'scoring', progress: 20, error: null });
       
       const scoreResponse = await axios.post('/api/score', {
@@ -84,15 +115,21 @@ export default function Home() {
         leadId: newLeadId,
         jobTitle: leadData.jobTitle,
         category: leadData.category,
-      });
+      }, { signal });
 
       setAnalysisResult(scoreResponse.data);
       setProcessingState({ type: 'scoring', progress: 100, error: null });
 
       // Move to results
       await new Promise(resolve => setTimeout(resolve, 800));
+      if (signal.aborted) return;
+
       setCurrentStep(3);
     } catch (error: any) {
+      if (axios.isCancel(error)) {
+        console.log('Analysis canceled by user');
+        return; // Don't update state to error, resetApp handles it
+      }
       console.error('App Pipeline Error:', error);
       const errorMessage = error.response?.data?.error || error.message || 'An unexpected error occurred';
       setProcessingState(prev => ({ ...prev, error: errorMessage }));
@@ -107,6 +144,9 @@ export default function Home() {
     setTranscript('');
     setAnalysisResult(null);
     setProcessingState({ type: '', progress: 0, error: null });
+    setLeadId(null);
+    setEmailStatus(null);
+    currentLeadIdRef.current = null;
   };
 
   return (
@@ -115,7 +155,14 @@ export default function Home() {
         <h1 className="outfit-font" style={{ fontSize: '32px', fontWeight: '800', marginBottom: '32px', color: 'var(--color-text-main)' }}>
           SalesGarners Call Quality Analyzer
         </h1>
-        <StepIndicator currentStep={currentStep} />
+        <StepIndicator 
+          currentStep={currentStep} 
+          onStepClick={(step) => {
+            if (step === 1 && currentStep > 1) {
+              handleCancelProcessing();
+            }
+          }}
+        />
       </header>
 
       <main>
@@ -138,7 +185,8 @@ export default function Home() {
         {currentStep === 2 && (
           <Step2_Processing
             processingState={processingState}
-            onRetry={() => setCurrentStep(1)}
+            onRetry={handleCancelProcessing}
+            onCancel={handleCancelProcessing}
           />
         )}
 

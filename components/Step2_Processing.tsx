@@ -6,9 +6,10 @@ import { ProcessingState } from '@/types';
 interface Step2ProcessingProps {
   processingState: ProcessingState;
   onRetry: () => void;
+  onCancel?: () => void;
 }
 
-const Step2_Processing: React.FC<Step2ProcessingProps> = ({ processingState, onRetry }) => {
+const Step2_Processing: React.FC<Step2ProcessingProps> = ({ processingState, onRetry, onCancel }) => {
   const { type, progress, error } = processingState;
 
   const isInitializing = type === 'initializing';
@@ -105,6 +106,36 @@ const Step2_Processing: React.FC<Step2ProcessingProps> = ({ processingState, onR
       }}>
         {isInitializing ? 'Securing your lead data in local storage...' : (isTranscribing ? 'Listening to the recording and identifying speakers...' : 'Analyzing the conversation for intent and fit...')}
       </p>
+
+      {onCancel && (
+        <button 
+          onClick={onCancel}
+          onMouseOver={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--color-red)';
+            e.currentTarget.style.color = 'white';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = 'var(--color-red)';
+          }}
+          style={{
+            marginTop: '32px',
+            background: 'transparent',
+            border: '1.5px solid var(--color-red)',
+            color: 'var(--color-red)',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            padding: '12px 24px',
+            textAlign: 'center',
+            width: '100%',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          Cancel Processing
+        </button>
+      )}
     </div>
   );
 };

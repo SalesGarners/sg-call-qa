@@ -266,7 +266,7 @@ const Step3_Results: React.FC<Step3ResultsProps> = ({
 
       {/* Reset */}
       <button className="primary-button" onClick={onReset}
-        style={{ marginTop: '32px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
+        style={{ width: '100%', marginTop: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
         <RefreshCw size={15} /> Analyze Another Call
       </button>
     </div>
