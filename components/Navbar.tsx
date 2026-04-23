@@ -2,7 +2,12 @@
 
 import Image from 'next/image';
 
+import { useSession, signOut } from 'next-auth/react';
+import { LogOut } from 'lucide-react';
+
 export default function Navbar() {
+  const { data: session } = useSession();
+
   return (
     <nav style={styles.nav}>
       <div style={styles.inner}>
@@ -18,6 +23,45 @@ export default function Navbar() {
             priority
           /></a>
         </div>
+
+        {/* User Actions */}
+        {session && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <span style={{ fontSize: '14px', fontWeight: '500', color: 'var(--color-text-main)' }}>
+              Hello, {session.user?.name}
+            </span>
+            <button 
+              onClick={() => signOut()}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'transparent',
+                border: '1px solid var(--color-border)',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '13px',
+                fontWeight: '500',
+                color: 'var(--color-text-main)',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-red-bg)';
+                e.currentTarget.style.color = 'var(--color-red)';
+                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--color-text-main)';
+                e.currentTarget.style.borderColor = 'var(--color-border)';
+              }}
+            >
+              <LogOut size={14} />
+              Sign Out
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   );
