@@ -292,7 +292,7 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     marginTop: '32px',
     padding: '32px',
-    border: '1.5px solid var(--color-purple)',
+    border: '1.5px solid var(--color-primary)',
     background: 'rgba(127, 119, 221, 0.02)',
   },
   header: {
@@ -343,7 +343,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: '1px',
-    color: 'var(--color-purple)',
+    color: 'var(--color-primary)',
     margin: '12px 0 4px 0',
     display: 'flex',
     alignItems: 'center',

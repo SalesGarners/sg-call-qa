@@ -24,11 +24,17 @@ export const db = {
       verdict?: string;
       score?: number;
       reasoning?: string;
+      intent?: number;
+      authority?: number;
+      demo_commitment?: number;
+      timeline?: number;
+      industry_fit?: number;
+      risk_level?: string;
       status?: string;
+      addedBy?: string;
     }) {
       await dbConnect();
       const lead = await Lead.create(data);
-      // Convert to a plain object and replace _id with id for frontend consistency
       const obj = lead.toObject();
       return { ...obj, id: obj._id.toString() };
     },
@@ -41,13 +47,18 @@ export const db = {
       verdict:        string;
       score:          number;
       reasoning:      string;
+      intent:         number;
+      authority:      number;
+      demo_commitment:number;
+      timeline:       number;
+      industry_fit:   number;
+      risk_level:     string;
       status:         string;
       emailStatus:    string;
       emailStatusRaw: string;
     }>) {
       await dbConnect();
       
-      // Map 'verdict' if needed (ensure it matches enum)
       const updateData = { ...data };
       
       const lead = await Lead.findByIdAndUpdate(id, updateData, { new: true });
@@ -61,9 +72,15 @@ export const db = {
      * Find a single lead by its ID
      */
     async findUnique(id: string) {
+      if (!id || id === 'undefined' || id === 'null') return null;
       await dbConnect();
       try {
-        const lead = await Lead.findById(id);
+        let lead = await Lead.findById(id);
+        
+        if (!lead) {
+          lead = await Lead.findOne({ $or: [{ _id: id }, { id: id }] });
+        }
+
         if (!lead) return null;
         
         const obj = lead.toObject();
@@ -94,6 +111,32 @@ export const db = {
     async findMany() {
       await dbConnect();
       const leads = await Lead.find({}).sort({ createdAt: -1 });
+      return leads.map(l => {
+        const obj = l.toObject();
+        return { ...obj, id: obj._id.toString() };
+      });
+    },
+
+    /**
+     * Search leads by email, name, or phone (case-insensitive partial match).
+     * Returns up to 10 results with PENDING status prioritized.
+     */
+    async search(query: string) {
+      await dbConnect();
+      const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped, 'i');
+
+      const leads = await Lead.find({
+        $or: [
+          { email: regex },
+          { firstName: regex },
+          { lastName: regex },
+          { phone: regex },
+        ]
+      })
+      .sort({ status: 1, createdAt: -1 }) // PENDING first, then newest
+      .limit(10);
+
       return leads.map(l => {
         const obj = l.toObject();
         return { ...obj, id: obj._id.toString() };

@@ -26,10 +26,11 @@ interface Step3ResultsProps {
   leadId: string | null;
   leadData: LeadData;
   emailStatus: string | null;
+  status?: string;
 }
 
 const Step3_Results: React.FC<Step3ResultsProps> = ({
-  analysisResult, transcript, onReset, leadId, leadData, emailStatus
+  analysisResult, transcript, onReset, leadId, leadData, emailStatus, status
 }) => {
   const [activeTab, setActiveTab] = useState<'score' | 'transcript'>('score');
   const [pushStatus, setPushStatus] = useState<'idle' | 'pushing' | 'success' | 'error'>('idle');
@@ -67,12 +68,15 @@ const Step3_Results: React.FC<Step3ResultsProps> = ({
   };
 
   const metrics = [
-    { name: 'Authority',       score: authority,       max: 40, color: '#3B6D11' },
-    { name: 'Intent',          score: intent,          max: 25, color: 'var(--color-purple)' },
-    { name: 'Demo Commitment', score: demo_commitment, max: 15, color: '#F97316' },
-    { name: 'Timeline',        score: timeline,        max: 10, color: '#D97706' },
-    { name: 'Industry Fit',    score: industry_fit,    max: 10, color: '#2563EB' },
+    { name: 'Authority',       score: authority || 0,       max: 40, color: 'var(--color-primary)' },
+    { name: 'Intent',          score: intent || 0,          max: 25, color: 'var(--color-green)' },
+    { name: 'Demo Commitment', score: demo_commitment || 0, max: 15, color: 'var(--color-amber)' },
+    { name: 'Timeline',        score: timeline || 0,        max: 10, color: 'var(--color-primary-dark)' },
+    { name: 'Industry Fit',    score: industry_fit || 0,    max: 10, color: '#6366f1' },
   ];
+
+  // Calculate the total score from the breakdown to ensure consistency
+  const calculatedScore = metrics.reduce((acc, m) => acc + m.score, 0);
 
   return (
     <div style={styles.wrapper}>
@@ -102,20 +106,20 @@ const Step3_Results: React.FC<Step3ResultsProps> = ({
               </span>
             </div>
           </div>
-          {/* QA Verdict badge */}
-          <div style={{
-            ...styles.verdictBadge,
-            backgroundColor: verdictConfig.tagBg,
-            color: verdictConfig.tagColor,
-            border: `1px solid ${verdictConfig.color}`,
-          }}>
-            {verdictConfig.icon}
-            <span>{verdictConfig.label}</span>
+          <div style={styles.badgeContainer}>
+             <div style={{ 
+               ...styles.verdictBadge, 
+               backgroundColor: verdictConfig.tagBg, 
+               color: verdictConfig.tagColor 
+             }}>
+               {verdictConfig.icon}
+               <span style={{ fontWeight: '700' }}>{verdictConfig.label}</span>
+             </div>
           </div>
         </div>
 
-        {/* Contact row */}
-        <div style={styles.contactRow}>
+        {/* Contact info strip */}
+        <div style={styles.contactStrip}>
           <div style={styles.contactItem}>
             <Mail size={14} color="var(--color-text-muted)" />
             <span>{leadData.email}</span>
@@ -144,7 +148,7 @@ const Step3_Results: React.FC<Step3ResultsProps> = ({
         {/* Score + Risk strip */}
         <div style={styles.scoreStrip}>
           <div style={styles.scoreBlock}>
-            <span style={styles.scoreNumber}>{score}<span style={{ fontSize: '16px', fontWeight: 400 }}>/100</span></span>
+            <span style={styles.scoreNumber}>{calculatedScore}<span style={{ fontSize: '16px', fontWeight: 400 }}>/100</span></span>
             <span style={styles.scoreLabel}>QA Score</span>
           </div>
           <div style={styles.scoreDivider} />
@@ -169,8 +173,8 @@ const Step3_Results: React.FC<Step3ResultsProps> = ({
         {(['score', 'transcript'] as const).map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{
             ...styles.tabBtn,
-            borderBottom: activeTab === tab ? '2px solid var(--color-purple)' : '2px solid transparent',
-            color: activeTab === tab ? 'var(--color-purple)' : 'var(--color-text-muted)',
+            borderBottom: activeTab === tab ? '2px solid var(--color-primary)' : '2px solid transparent',
+            color: activeTab === tab ? 'var(--color-primary)' : 'var(--color-text-muted)',
             fontWeight: activeTab === tab ? '700' : '500',
           }}>
             {tab === 'score' ? <><BarChart3 size={15} /> Score Breakdown</> : <><MessageSquare size={15} /> Transcript</>}
@@ -211,18 +215,18 @@ const Step3_Results: React.FC<Step3ResultsProps> = ({
 
           {/* CRM Push */}
           {leadId && (
-            <div className="card" style={{ ...styles.section, border: '1px solid var(--color-purple)', background: 'rgba(127,119,221,0.03)' }}>
+            <div className="card" style={{ ...styles.section, border: '1px solid var(--color-primary)', background: 'rgba(79, 70, 229, 0.03)' }}>
               <div style={styles.crmHeader}>
-                <Database size={18} color="var(--color-purple)" />
+                <Database size={18} color="var(--color-primary)" />
                 <h3 style={styles.sectionTitle}>Push to HubSpot CRM</h3>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '14px' }}>
                 Lead is saved locally. Click below to sync it to your HubSpot portal.
               </p>
-              {pushStatus === 'success' ? (
+              {pushStatus === 'success' || status === 'PUSHED_TO_CRM' ? (
                 <div style={styles.successBanner}>
                   <CheckCircle2 size={16} />
-                  <span>Successfully pushed to HubSpot!</span>
+                  <span>{status === 'PUSHED_TO_CRM' ? 'This lead is already in your CRM' : 'Successfully pushed to HubSpot!'}</span>
                 </div>
               ) : (
                 <>
@@ -232,7 +236,7 @@ const Step3_Results: React.FC<Step3ResultsProps> = ({
                     onClick={async () => {
                       setPushStatus('pushing');
                       try {
-                        await axios.post(`/api/leads/${leadId}/push`);
+                        await axios.post(`/api/leads/${leadId}`);
                         setPushStatus('success');
                       } catch (err: any) {
                         setPushStatus('error');
@@ -281,7 +285,7 @@ const styles: Record<string, React.CSSProperties> = {
   profileHeader: { display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' },
   avatarCircle: {
     width: '52px', height: '52px', borderRadius: '50%',
-    background: 'linear-gradient(135deg, var(--color-purple), #a78bfa)',
+    background: 'linear-gradient(135deg, var(--color-primary), #6366f1)',
     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   avatarInitials: { color: 'white', fontWeight: '700', fontSize: '18px', fontFamily: "'Outfit', sans-serif" },
@@ -338,7 +342,7 @@ const styles: Record<string, React.CSSProperties> = {
   metricLabelRow: { display: 'flex', justifyContent: 'space-between' },
   metricLabel: { fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '500' },
   metricValue: { fontSize: '13px', fontWeight: '700', color: 'var(--color-text-main)' },
-  barTrack: { height: '7px', backgroundColor: '#F0F0F0', borderRadius: '99px', overflow: 'hidden' },
+  barTrack: { height: '7px', backgroundColor: 'var(--color-primary-light)', borderRadius: '99px', overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: '99px' },
 
   // Analyst Notes
