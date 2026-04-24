@@ -66,7 +66,7 @@ const Step2_Processing: React.FC<Step2ProcessingProps> = ({ processingState, onR
             transition={{ duration: 0.5 }}
             style={{
               ...styles.progressBar,
-              backgroundColor: isScoring || isSaving ? '#3B6D11' : 'var(--color-purple)',
+              backgroundColor: isScoring || isSaving ? 'var(--color-green)' : 'var(--color-primary)',
             }}
           />
         </div>
@@ -93,7 +93,7 @@ const Step2_Processing: React.FC<Step2ProcessingProps> = ({ processingState, onR
             transition={{ duration: 0.5 }}
             style={{
               ...styles.progressBar,
-              backgroundColor: isSaving ? '#3B6D11' : 'var(--color-purple)',
+              backgroundColor: isSaving ? 'var(--color-green)' : 'var(--color-primary)',
             }}
           />
         </div>
@@ -159,7 +159,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   progressTrack: {
     height: '8px',
-    backgroundColor: '#F0F0F0',
+    backgroundColor: 'var(--color-primary-light)',
     borderRadius: '4px',
     overflow: 'hidden',
   },

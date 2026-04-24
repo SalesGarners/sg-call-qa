@@ -6,10 +6,18 @@ import StepIndicator from '@/components/StepIndicator';
 import Step1_Upload from '@/components/Step1_Upload';
 import Step2_Processing from '@/components/Step2_Processing';
 import Step3_Results from '@/components/Step3_Results';
+import LeadDashboard from '@/components/LeadDashboard';
+import AnalyticsDashboard from '@/components/AnalyticsDashboard';
+import Sidebar from '@/components/Sidebar';
+import { useSession } from 'next-auth/react';
 import { AIProvider, AnalysisResult, ProcessingState } from '@/types';
 
 export default function Home() {
+  const { data: session } = useSession();
+  const [activeView, setActiveView] = useState<'analytics' | 'dashboard' | 'analyzer' | 'details'>('analytics');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>('groq');
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [manualTranscript, setManualTranscript] = useState('');
@@ -18,6 +26,8 @@ export default function Home() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [leadId, setLeadId] = useState<string | null>(null);
   const [emailStatus, setEmailStatus] = useState<string | null>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedLeadStatus, setSelectedLeadStatus] = useState<string | null>(null);
   const [leadData, setLeadData] = useState({
     firstName: '',
     lastName: '',
@@ -34,13 +44,32 @@ export default function Home() {
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const handleBackToDashboard = () => {
+    setActiveView('dashboard');
+    resetApp();
+  };
+
+  const handleAnalyzeFromDashboard = (lead: any) => {
+    setSelectedLeadId(lead.id);
+    setSelectedLeadStatus(lead.status);
+    setLeadData({
+      firstName: lead.firstName,
+      lastName: lead.lastName,
+      email: lead.email,
+      phone: lead.phone,
+      category: lead.category,
+      employeeCount: lead.employeeCount,
+      jobTitle: lead.jobTitle || '',
+    });
+    setActiveView('analyzer');
+    setCurrentStep(1);
+  };
+
   const handleCancelProcessing = async () => {
-    // 1. Abort any ongoing network requests
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-
-    // 2. Reset the application state
     resetApp();
   };
 
@@ -104,15 +133,37 @@ export default function Home() {
       if (signal.aborted) return;
 
       setProcessingState({ type: 'saving', progress: 100, error: null });
+
+      // Ensure the total score saved to DB matches the sum of its parts
+      const calculatedScore = (analysisData.authority || 0) + 
+                             (analysisData.intent || 0) + 
+                             (analysisData.demo_commitment || 0) + 
+                             (analysisData.timeline || 0) + 
+                             (analysisData.industry_fit || 0);
       
-      const leadResponse = await axios.post('/api/leads', {
-        ...leadData,
-        transcript: finalTranscript,
-        verdict: analysisData.verdict,
-        score: analysisData.score,
-        reasoning: analysisData.reasoning,
-        status: 'ANALYZED'
-      }, { signal });
+      const normalizedData = {
+        ...analysisData,
+        score: calculatedScore > 0 ? calculatedScore : analysisData.score
+      };
+
+      let leadResponse;
+
+      if (selectedLeadId) {
+        // UPDATE existing lead with analysis results
+        leadResponse = await axios.patch(`/api/leads/${selectedLeadId}`, {
+          transcript: finalTranscript,
+          ...normalizedData,
+          status: 'ANALYZED',
+        }, { signal });
+      } else {
+        // CREATE new lead with all data
+        leadResponse = await axios.post('/api/leads', {
+          ...leadData,
+          transcript: finalTranscript,
+          ...normalizedData,
+          status: 'ANALYZED'
+        }, { signal });
+      }
       
       setLeadId(leadResponse.data.id);
       setEmailStatus(leadResponse.data.emailStatus ?? null);
@@ -122,7 +173,7 @@ export default function Home() {
     } catch (error: any) {
       if (axios.isCancel(error)) {
         console.log('Analysis canceled by user');
-        return; // Don't update state to error, resetApp handles it
+        return;
       }
       console.error('App Pipeline Error:', error);
       const errorMessage = error.response?.data?.error || error.message || 'An unexpected error occurred';
@@ -140,64 +191,160 @@ export default function Home() {
     setProcessingState({ type: '', progress: 0, error: null });
     setLeadId(null);
     setEmailStatus(null);
+    setSelectedLeadId(null);
+    setSelectedLeadStatus(null);
   };
 
+  const handleViewDetails = (lead: any) => {
+    setSelectedLeadId(lead.id);
+    setSelectedLeadStatus(lead.status);
+    setAnalysisResult({
+      verdict: lead.verdict,
+      score: lead.score,
+      reasoning: lead.reasoning,
+      intent: lead.intent,
+      authority: lead.authority,
+      demo_commitment: lead.demo_commitment,
+      timeline: lead.timeline,
+      industry_fit: lead.industry_fit,
+      risk_level: lead.risk_level,
+    });
+    setTranscript(lead.transcript || '');
+    setLeadData({
+      firstName: lead.firstName,
+      lastName: lead.lastName,
+      email: lead.email,
+      phone: lead.phone,
+      category: lead.category,
+      employeeCount: lead.employeeCount,
+      jobTitle: lead.jobTitle || '',
+    });
+    setLeadId(lead.id);
+    setActiveView('details');
+  };
+
+  const sidebarWidth = isSidebarCollapsed ? '80px' : '260px';
+
   return (
-    <div className="container">
-      <header style={{ textAlign: 'center', marginBottom: '60px' }}>
-        <h1 className="outfit-font" style={{ fontSize: '32px', fontWeight: '800', marginBottom: '32px', color: 'var(--color-text-main)' }}>
-          SalesGarners Call Quality Analyzer
-        </h1>
-        <StepIndicator 
-          currentStep={currentStep} 
-          onStepClick={(step) => {
-            if (step === 1 && currentStep > 1) {
-              handleCancelProcessing();
-            }
-          }}
-        />
-      </header>
+    <div style={{ display: 'flex' }}>
+      <Sidebar 
+        activeView={activeView === 'details' ? 'analyzer' : activeView} 
+        onViewChange={setActiveView} 
+        userName={session?.user?.name}
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
+      />
+      
+      <div 
+        className="container" 
+        style={{ 
+          marginLeft: sidebarWidth, 
+          flex: 1, 
+          maxWidth: `calc(100vw - ${sidebarWidth})`,
+          overflowX: 'hidden',
+          transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+        }}
+      >
+        <header style={{ 
+          textAlign: 'center', 
+          marginBottom: (activeView === 'dashboard' || activeView === 'analytics') ? '0' : '40px',
+          marginTop: (activeView === 'dashboard' || activeView === 'analytics') ? '20px' : '0' 
+        }}>
+          {(activeView !== 'dashboard' && activeView !== 'analytics') && (
+            <h1 className="outfit-font" style={{ fontSize: '32px', fontWeight: '800', marginBottom: '16px', color: 'var(--color-text-main)' }}>
+              {activeView === 'details' ? 'Lead Analysis Details' : 'Call Quality Analyzer'}
+            </h1>
+          )}
 
-      <main>
-        {currentStep === 1 && (
-          <Step1_Upload
-            audioFile={audioFile}
-            setAudioFile={setAudioFile}
-            selectedProvider={selectedProvider}
-            setSelectedProvider={setSelectedProvider}
-            manualTranscript={manualTranscript}
-            setManualTranscript={setManualTranscript}
-            useManualTranscript={useManualTranscript}
-            setUseManualTranscript={setUseManualTranscript}
-            onStart={handleStartAnalysis}
-            leadData={leadData}
-            setLeadData={setLeadData}
-          />
-        )}
+          {(activeView !== 'dashboard' && activeView !== 'analytics') && (
+            <div style={{ marginBottom: '32px' }}>
+              <button 
+                onClick={handleBackToDashboard}
+                style={{
+                  background: 'none', border: 'none', color: 'var(--color-purple)', 
+                  fontWeight: '600', fontSize: '14px', cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: '6px'
+                }}
+              >
+                ← Back to Dashboard
+              </button>
+              {activeView === 'analyzer' && (
+                <StepIndicator 
+                  currentStep={currentStep} 
+                  onStepClick={(step) => {
+                    if (step === 1 && currentStep > 1) {
+                      handleCancelProcessing();
+                    }
+                  }}
+                />
+              )}
+            </div>
+          )}
+        </header>
 
-        {currentStep === 2 && (
-          <Step2_Processing
-            processingState={processingState}
-            onRetry={handleCancelProcessing}
-            onCancel={handleCancelProcessing}
-          />
-        )}
+        <main>
+          {activeView === 'analytics' ? (
+            <AnalyticsDashboard />
+          ) : activeView === 'dashboard' ? (
+            <LeadDashboard onAnalyze={handleAnalyzeFromDashboard} onViewDetails={handleViewDetails} />
+          ) : activeView === 'details' ? (
+            <Step3_Results
+              analysisResult={analysisResult!}
+              transcript={transcript}
+              onReset={handleBackToDashboard}
+              leadId={leadId}
+              leadData={leadData}
+              emailStatus={emailStatus}
+              status={selectedLeadStatus || undefined}
+            />
+          ) : (
+            <>
+              {currentStep === 1 && (
+                <Step1_Upload
+                  audioFile={audioFile}
+                  setAudioFile={setAudioFile}
+                  selectedProvider={selectedProvider}
+                  setSelectedProvider={setSelectedProvider}
+                  manualTranscript={manualTranscript}
+                  setManualTranscript={setManualTranscript}
+                  useManualTranscript={useManualTranscript}
+                  setUseManualTranscript={setUseManualTranscript}
+                  onStart={handleStartAnalysis}
+                  leadData={leadData}
+                  setLeadData={setLeadData}
+                  selectedLeadId={selectedLeadId}
+                  setSelectedLeadId={setSelectedLeadId}
+                  selectedLeadStatus={selectedLeadStatus}
+                  setSelectedLeadStatus={setSelectedLeadStatus}
+                />
+              )}
 
-        {currentStep === 3 && analysisResult && (
-          <Step3_Results
-            analysisResult={analysisResult}
-            transcript={transcript}
-            onReset={resetApp}
-            leadId={leadId}
-            leadData={leadData}
-            emailStatus={emailStatus}
-          />
-        )}
-      </main>
+              {currentStep === 2 && (
+                <Step2_Processing
+                  processingState={processingState}
+                  onRetry={handleCancelProcessing}
+                  onCancel={handleCancelProcessing}
+                />
+              )}
 
-      <footer style={{ marginTop: '80px', textAlign: 'center', fontSize: '12px', color: 'var(--color-text-muted)' }}>
-        <p>A product by SalesGarners</p>
-      </footer>
+              {currentStep === 3 && analysisResult && (
+                <Step3_Results
+                  analysisResult={analysisResult}
+                  transcript={transcript}
+                  onReset={resetApp}
+                  leadId={leadId}
+                  leadData={leadData}
+                  emailStatus={emailStatus}
+                />
+              )}
+            </>
+          )}
+        </main>
+
+        <footer style={{ marginTop: '80px', textAlign: 'center', fontSize: '12px', color: 'var(--color-text-muted)' }}>
+          <p>A product by SalesGarners</p>
+        </footer>
+      </div>
     </div>
   );
 }

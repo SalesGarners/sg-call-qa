@@ -1,22 +1,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
 
 :root {
-  --color-purple: #7F77DD;
-  --color-purple-light: #F0EFFF;
+  --color-primary: #4F46E5;
+  --color-primary-light: #EEF2FF;
+  --color-primary-dark: #3730A3;
   
-  --color-green: #3B6D11;
-  --color-green-bg: #EAF3DE;
+  --color-green: #10B981;
+  --color-green-bg: #D1FAE5;
   
-  --color-amber: #854F0B;
-  --color-amber-bg: #FAEEDA;
+  --color-amber: #F59E0B;
+  --color-amber-bg: #FEF3C7;
   
-  --color-red: #A32D2D;
-  --color-red-bg: #FCEBEB;
+  --color-red: #EF4444;
+  --color-red-bg: #FEE2E2;
   
-  --color-border: rgba(0, 0, 0, 0.1);
-  --color-text-main: #1A1A1A;
-  --color-text-muted: #666666;
-  --color-bg-app: #FAFAFA;
+  --color-border: #E5E7EB;
+  --color-text-main: #111827;
+  --color-text-muted: #6B7280;
+  --color-bg-app: #F9FAFB;
+  --color-bg-card: #FFFFFF;
 
   --font-inter: 'Inter', sans-serif;
   --font-outfit: 'Outfit', sans-serif;
@@ -42,16 +44,24 @@ h1, h2, h3, h4, .outfit-font {
 
 .card {
   background: white;
-  border-radius: 12px;
-  border: 0.5px solid var(--color-border);
+  border-radius: 24px;
+  border: 1px solid var(--color-border);
   padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+}
+
+.saas-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
 
 .container {
-  max-width: 900px;
+  max-width: 1400px;
+  width: 95%;
   margin: 0 auto;
-  padding: 60px 20px;
+  padding: 40px 20px;
 }
 
 button {
@@ -66,14 +76,14 @@ button:disabled {
 }
 
 .primary-button {
-  background-color: var(--color-purple);
+  background-color: var(--color-primary);
   color: white;
   border: none;
   border-radius: 10px;
   padding: 14px 28px;
   font-weight: 600;
   font-size: 16px;
-  box-shadow: 0 4px 12px rgba(127, 119, 221, 0.3);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
   opacity: 1;
   cursor: pointer;
 }
@@ -88,13 +98,13 @@ button:disabled {
 }
 
 .primary-button:hover:not(:disabled) {
-  background-color: #6A61C9; /* Slightly darker purple on hover */
+  background-color: #4338CA; /* Slightly darker primary on hover */
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(127, 119, 221, 0.4);
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
 }
 
 .primary-button:active:not(:disabled) {
-  background-color: #5851AD; /* Even darker purple when clicked */
+  background-color: #3730A3; /* Even darker primary when clicked */
   transform: translateY(0);
 }
 
@@ -114,6 +124,50 @@ button:disabled {
 
 .fade-in {
   animation: fadeIn 0.5s ease-out forwards;
+}
+
+.analyze-hover {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--color-primary);
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.analyze-hover:hover {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+/* Custom Table Scrollbar */
+div[style*="overflowX: 'auto'"]::-webkit-scrollbar,
+.card div::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+div[style*="overflowX: 'auto'"]::-webkit-scrollbar-track,
+.card div::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+div[style*="overflowX: 'auto'"]::-webkit-scrollbar-thumb,
+.card div::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 10px;
+}
+
+div[style*="overflowX: 'auto'"]::-webkit-scrollbar-thumb:hover,
+.card div::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
 }
 
 /* Hide scrollbar but keep functionality */

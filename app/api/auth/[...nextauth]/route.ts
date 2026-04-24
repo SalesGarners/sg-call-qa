@@ -34,6 +34,7 @@ const handler = NextAuth({
         return {
           id: user._id.toString(),
           name: user.username,
+          role: user.role || 'analyst',
         };
       }
     })
@@ -50,12 +51,14 @@ const handler = NextAuth({
       if (user) {
         token.id = user.id;
         token.name = user.name;
+        token.role = (user as any).role;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.name = token.name;
+        (session.user as any).role = token.role;
       }
       return session;
     }

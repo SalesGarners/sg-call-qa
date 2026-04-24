@@ -1,12 +1,15 @@
 'use client';
 
 import Image from 'next/image';
-
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { LogOut } from 'lucide-react';
+import { LogOut, BarChart3, ClipboardList } from 'lucide-react';
 
 export default function Navbar() {
   const { data: session } = useSession();
+  const pathname = usePathname();
+  const role = (session?.user as any)?.role;
 
   return (
     <nav style={styles.nav}>
@@ -24,28 +27,37 @@ export default function Navbar() {
           /></a>
         </div>
 
-        {/* User Actions */}
+        {/* Navigation + User Actions */}
         {session && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            {/* Role-based nav links */}
+            {role === 'analyst' && (
+              <Link href="/" style={{
+                ...styles.navLink,
+                color: pathname === '/' ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                borderBottom: pathname === '/' ? '2px solid var(--color-primary)' : '2px solid transparent',
+              }}>
+                <BarChart3 size={14} /> Call QA
+              </Link>
+            )}
+            {role === 'agent' && (
+              <Link href="/agent" style={{
+                ...styles.navLink,
+                color: pathname === '/agent' ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                borderBottom: pathname === '/agent' ? '2px solid var(--color-primary)' : '2px solid transparent',
+              }}>
+                <ClipboardList size={14} /> Lead Intake
+              </Link>
+            )}
+
+            <div style={styles.divider} />
+
             <span style={{ fontSize: '14px', fontWeight: '500', color: 'var(--color-text-main)' }}>
               Hello, {session.user?.name}
             </span>
             <button 
               onClick={() => signOut()}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: 'transparent',
-                border: '1px solid var(--color-border)',
-                borderRadius: '6px',
-                padding: '6px 12px',
-                fontSize: '13px',
-                fontWeight: '500',
-                color: 'var(--color-text-main)',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
+              style={styles.signOutBtn}
               onMouseOver={(e) => {
                 e.currentTarget.style.backgroundColor = 'var(--color-red-bg)';
                 e.currentTarget.style.color = 'var(--color-red)';
@@ -80,7 +92,8 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: '0 1px 12px rgba(0,0,0,0.04)',
   },
   inner: {
-    maxWidth: '900px',
+    maxWidth: '1400px',
+    width: '95%',
     margin: '0 auto',
     padding: '0 20px',
     height: '60px',
@@ -92,26 +105,33 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
   },
-  badge: {
+  navLink: {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: '600',
-    color: 'var(--color-purple)',
-    backgroundColor: 'var(--color-purple-light)',
-    padding: '5px 12px',
-    borderRadius: '99px',
-    border: '1px solid rgba(127,119,221,0.3)',
-    letterSpacing: '0.3px',
+    textDecoration: 'none',
+    padding: '6px 0',
+    transition: 'all 0.2s',
   },
-  badgeDot: {
-    width: '7px',
-    height: '7px',
-    borderRadius: '50%',
-    backgroundColor: 'var(--color-purple)',
-    display: 'inline-block',
-    boxShadow: '0 0 6px rgba(127,119,221,0.7)',
-    animation: 'pulse 2s infinite',
+  divider: {
+    width: '1px',
+    height: '24px',
+    backgroundColor: 'var(--color-border)',
+  },
+  signOutBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    background: 'transparent',
+    border: '1px solid var(--color-border)',
+    borderRadius: '6px',
+    padding: '6px 12px',
+    fontSize: '13px',
+    fontWeight: '500',
+    color: 'var(--color-text-main)',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
   },
 };

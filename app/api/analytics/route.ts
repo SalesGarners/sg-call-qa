@@ -1,0 +1,99 @@
+import { NextResponse } from 'next/server';
+import dbConnect from '@/lib/mongodb';
+import Lead from '@/lib/models/Lead';
+
+export async function GET() {
+  try {
+    await dbConnect();
+
+    // 1. Fetch KPI Totals
+    const totalLeads = await Lead.countDocuments();
+    const analyzedLeads = await Lead.countDocuments({ status: { $in: ['ANALYZED', 'PUSHED_TO_CRM'] } });
+    const pushedLeads = await Lead.countDocuments({ status: 'PUSHED_TO_CRM' });
+    const disqualifiedLeads = await Lead.countDocuments({ verdict: 'Not Qualified' });
+
+    // 2. Fetch Agent Performance Leaderboard
+    const agentPerformance = await Lead.aggregate([
+      {
+        $match: {
+          addedBy: { $ne: null, $exists: true } // Only include leads added by agents
+        }
+      },
+      {
+        $group: {
+          _id: '$addedBy',
+          totalAdded: { $sum: 1 },
+          analyzedCount: {
+            $sum: { $cond: [{ $in: ['$status', ['ANALYZED', 'PUSHED_TO_CRM']] }, 1, 0] }
+          },
+          pushedCount: {
+            $sum: { $cond: [{ $eq: ['$status', 'PUSHED_TO_CRM'] }, 1, 0] }
+          },
+          avgScore: {
+            $avg: { $cond: [{ $gt: ['$score', 0] }, '$score', null] } // Avg score only for analyzed
+          },
+          goodToGoCount: {
+            $sum: { $cond: [{ $eq: ['$verdict', 'Good to Go (SQL)'] }, 1, 0] }
+          },
+          notQualifiedCount: {
+            $sum: { $cond: [{ $eq: ['$verdict', 'Not Qualified'] }, 1, 0] }
+          }
+        }
+      },
+      {
+        $project: {
+          agentName: '$_id',
+          totalAdded: 1,
+          analyzedCount: 1,
+          pushedCount: 1,
+          avgScore: { $round: ['$avgScore', 1] },
+          goodToGoCount: 1,
+          notQualifiedCount: 1,
+          _id: 0
+        }
+      },
+      { $sort: { totalAdded: -1, avgScore: -1 } } // Sort by volume, then quality
+    ]);
+
+    // 3. Verdict Distribution
+    const verdictDistribution = await Lead.aggregate([
+      {
+        $match: { verdict: { $ne: null } }
+      },
+      {
+        $group: {
+          _id: '$verdict',
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          verdict: '$_id',
+          count: 1,
+          _id: 0
+        }
+      }
+    ]);
+
+    // Format Verdicts for easier frontend usage
+    const formattedVerdicts = {
+      sql: verdictDistribution.find(v => v.verdict === 'Good to Go (SQL)')?.count || 0,
+      borderline: verdictDistribution.find(v => v.verdict === 'Borderline')?.count || 0,
+      notQualified: verdictDistribution.find(v => v.verdict === 'Not Qualified')?.count || 0,
+    };
+
+    return NextResponse.json({
+      kpis: {
+        totalLeads,
+        analyzedLeads,
+        pushedLeads,
+        disqualifiedLeads,
+      },
+      agentPerformance,
+      verdicts: formattedVerdicts,
+    });
+  } catch (error) {
+    console.error('Failed to fetch analytics:', error);
+    return NextResponse.json({ error: 'Failed to fetch analytics data' }, { status: 500 });
+  }
+}
