@@ -17,6 +17,7 @@ interface LeadData {
   category: string;
   employeeCount: string;
   jobTitle: string;
+  aiProvider?: string;
 }
 
 interface Step3ResultsProps {
@@ -104,6 +105,11 @@ const Step3_Results: React.FC<Step3ResultsProps> = ({
               <span style={styles.metaChip}>
                 <Users size={12} /> {leadData.employeeCount} employees
               </span>
+              {leadData.aiProvider && (
+                <span style={{ ...styles.metaChip, backgroundColor: '#f8fafc', borderColor: '#e2e8f0', color: '#475569', textTransform: 'capitalize' }}>
+                  🤖 {leadData.aiProvider}
+                </span>
+              )}
             </div>
           </div>
           <div style={styles.badgeContainer}>

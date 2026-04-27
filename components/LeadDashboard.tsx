@@ -18,6 +18,20 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'ANALYZED' | 'PUSHED_TO_CRM'>('ALL');
   const [scoreSort, setScoreSort] = useState<'NONE' | 'ASC' | 'DESC'>('NONE');
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const getLocalDateString = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return getLocalDateString(d);
+  });
+  const [endDate, setEndDate] = useState(() => getLocalDateString(new Date()));
   
   // Drag to scroll logic
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -39,6 +53,7 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
       { header: 'Phone', key: 'phone', width: 20 },
       { header: 'Employee Count', key: 'employeeCount', width: 15 },
       { header: 'Lead Status', key: 'status', width: 15 },
+      { header: 'AI Provider', key: 'aiProvider', width: 15 },
       { header: 'Lead Scoring', key: 'score', width: 15 },
       { header: 'QA Analyst Note', key: 'reasoning', width: 40 },
       { header: 'Transcript', key: 'transcript', width: 50 },
@@ -56,6 +71,7 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
         phone: lead.phone,
         employeeCount: lead.employeeCount,
         status: lead.status === 'PENDING' ? 'Pending' : lead.status,
+        aiProvider: lead.aiProvider || '',
         score: lead.status === 'PENDING' ? '' : (lead.score || 0),
         reasoning: lead.status === 'PENDING' ? '' : (lead.reasoning || ''),
         transcript: lead.status === 'PENDING' ? '' : (lead.transcript || ''),
@@ -109,7 +125,7 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
     if (!silent) setLoading(true);
     setIsRefreshing(true);
     try {
-      const res = await fetch('/api/leads');
+      const res = await fetch(`/api/leads?startDate=${startDate}&endDate=${endDate}`);
       if (!res.ok) throw new Error('Failed to fetch leads');
       const data = await res.json();
       setLeads(data);
@@ -124,7 +140,7 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
 
   useEffect(() => {
     fetchLeads();
-  }, []);
+  }, [startDate, endDate]);
 
   const filteredLeads = leads.filter(lead => {
     // 1. Search term filter
@@ -203,6 +219,28 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
 
         <div style={styles.filterSection}>
           <div style={styles.filterGroup}>
+            <span style={styles.filterLabel}>Date:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '0 8px', backgroundColor: 'white', height: '36px' }}>
+              <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600' }}>From:</span>
+              <input 
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                max={endDate}
+                style={styles.dateInput}
+              />
+              <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600' }}>To:</span>
+              <input 
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate}
+                style={styles.dateInput}
+              />
+            </div>
+          </div>
+
+          <div style={styles.filterGroup}>
             <span style={styles.filterLabel}>Status:</span>
             <select 
               style={styles.select}
@@ -270,6 +308,7 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
                 <th style={{ ...styles.th, width: '220px', borderRight: '1px solid var(--color-border)' }}>Email</th>
                 <th style={{ ...styles.th, width: '140px', borderRight: '1px solid var(--color-border)' }}>Category</th>
                 <th style={{ ...styles.th, width: '100px', borderRight: '1px solid var(--color-border)' }}>Employees</th>
+                <th style={{ ...styles.th, width: '120px', borderRight: '1px solid var(--color-border)' }}>AI Provider</th>
                 <th style={{ ...styles.th, width: '100px', borderRight: '1px solid var(--color-border)' }}>Score</th>
                 <th style={{ ...styles.th, textAlign: 'center', width: '120px' }}>Action</th>
               </tr>
@@ -315,6 +354,15 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
                   <td style={{ ...styles.td, borderRight: '1px solid var(--color-border)' }}>
                     <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-text-main)' }}>
                       {lead.employeeCount || '—'}
+                    </span>
+                  </td>
+                  <td style={{ ...styles.td, borderRight: '1px solid var(--color-border)' }}>
+                    <span style={{ 
+                      fontSize: '11px', fontWeight: '600', padding: '3px 8px', borderRadius: '4px',
+                      backgroundColor: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0',
+                      textTransform: 'capitalize'
+                    }}>
+                      {lead.aiProvider || '—'}
                     </span>
                   </td>
                   <td style={{ ...styles.td, borderRight: '1px solid var(--color-border)' }}>
@@ -398,7 +446,12 @@ const styles: Record<string, React.CSSProperties> = {
   select: {
     padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--color-border)', 
     fontSize: '13px', fontWeight: '500', outline: 'none', cursor: 'pointer', backgroundColor: 'white',
-    color: 'var(--color-text-main)', minWidth: '130px'
+    color: 'var(--color-text-main)', minWidth: '130px', height: '36px'
+  },
+  dateInput: {
+    border: 'none', backgroundColor: 'transparent', height: '100%', 
+    padding: '4px 0px', fontSize: '13px', fontWeight: '500', color: 'var(--color-text-main)',
+    outline: 'none', cursor: 'text'
   },
   searchInput: { flex: 1, border: 'none', outline: 'none', fontSize: '14px', backgroundColor: 'transparent', padding: '8px 0' },
   tableCard: { padding: 0, overflow: 'hidden', border: '1px solid var(--color-border)' },

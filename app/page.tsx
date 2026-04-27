@@ -154,6 +154,7 @@ export default function Home() {
           transcript: finalTranscript,
           ...normalizedData,
           status: 'ANALYZED',
+          aiProvider: selectedProvider,
         }, { signal });
       } else {
         // CREATE new lead with all data
@@ -161,7 +162,8 @@ export default function Home() {
           ...leadData,
           transcript: finalTranscript,
           ...normalizedData,
-          status: 'ANALYZED'
+          status: 'ANALYZED',
+          aiProvider: selectedProvider,
         }, { signal });
       }
       
@@ -218,6 +220,7 @@ export default function Home() {
       category: lead.category,
       employeeCount: lead.employeeCount,
       jobTitle: lead.jobTitle || '',
+      aiProvider: lead.aiProvider || '',
     });
     setLeadId(lead.id);
     setActiveView('details');

@@ -41,13 +41,27 @@ export default function AnalyticsDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const getLocalDateString = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return getLocalDateString(d);
+  });
+  const [endDate, setEndDate] = useState(() => getLocalDateString(new Date()));
+
   const fetchAnalytics = async (silent = false) => {
     if (!silent) setIsLoading(true);
     else setIsRefreshing(true);
     
     setError(null);
     try {
-      const response = await axios.get('/api/analytics');
+      const response = await axios.get(`/api/analytics?startDate=${startDate}&endDate=${endDate}`);
       setData(response.data);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load analytics data.');
@@ -60,7 +74,7 @@ export default function AnalyticsDashboard() {
 
   useEffect(() => {
     fetchAnalytics();
-  }, []);
+  }, [startDate, endDate]);
 
   if (isLoading) {
     return (
@@ -113,9 +127,28 @@ export default function AnalyticsDashboard() {
           <p style={styles.pageSubtitle}>Track lead volume, quality distribution, and agent performance.</p>
         </div>
         <div style={styles.headerActions}>
-          <div style={styles.datePickerFake}>
-            <Calendar size={16} />
-            <span>Last 30 Days</span>
+          <div style={{ ...styles.datePickerFake, padding: 0, overflow: 'hidden' }}>
+            <div style={{ paddingLeft: '12px', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+              <Calendar size={16} color="var(--color-text-muted)" />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px 0 8px', gap: '8px' }}>
+              <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600' }}>From:</span>
+              <input 
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                max={endDate}
+                style={styles.dateInput}
+              />
+              <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600' }}>To:</span>
+              <input 
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate}
+                style={styles.dateInput}
+              />
+            </div>
           </div>
           <button style={styles.iconButton} onClick={() => fetchAnalytics(true)} title="Refresh Data">
             <RefreshCcw size={16} className={isRefreshing ? "spin-animation" : ""} />
@@ -368,7 +401,13 @@ const styles: Record<string, React.CSSProperties> = {
   datePickerFake: {
     display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px',
     backgroundColor: 'white', border: '1px solid var(--color-border)', borderRadius: '8px',
-    fontSize: '13px', fontWeight: '500', color: 'var(--color-text-main)', cursor: 'pointer'
+    fontSize: '13px', fontWeight: '500', color: 'var(--color-text-main)', cursor: 'pointer',
+    height: '36px'
+  },
+  dateInput: {
+    border: 'none', backgroundColor: 'transparent', height: '100%', 
+    padding: '4px 0px', fontSize: '13px', fontWeight: '500', color: 'var(--color-text-main)',
+    outline: 'none', cursor: 'text'
   },
   iconButton: {
     display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px',

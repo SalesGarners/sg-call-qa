@@ -42,7 +42,7 @@ export async function PATCH(
     const body = await req.json();
 
     const { 
-      transcript, verdict, score, reasoning, status,
+      transcript, verdict, score, reasoning, status, aiProvider,
       intent, authority, demo_commitment, timeline, industry_fit, risk_level
     } = body;
 
@@ -58,6 +58,7 @@ export async function PATCH(
       industry_fit,
       risk_level,
       status: status || 'ANALYZED',
+      aiProvider
     });
 
     if (!updated) {
