@@ -23,6 +23,7 @@ export interface ILead extends Document {
   emailStatusRaw?: string;
   addedBy?: string;
   aiProvider?: string;
+  createdAtEST?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,6 +55,7 @@ const LeadSchema: Schema = new Schema({
   emailStatusRaw: { type: String, default: null },
   addedBy: { type: String, default: null },
   aiProvider: { type: String, default: null },
+  createdAtEST: { type: String, default: null },
 }, { 
   timestamps: true,
   collection: 'Leads'

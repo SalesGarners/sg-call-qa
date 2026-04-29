@@ -33,6 +33,7 @@ export const db = {
       status?: string;
       addedBy?: string;
       aiProvider?: string;
+      createdAtEST?: string;
     }) {
       await dbConnect();
       const lead = await Lead.create(data);
