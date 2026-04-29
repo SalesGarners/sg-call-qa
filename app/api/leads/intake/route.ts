@@ -35,11 +35,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Record time in EST
+    const createdAtEST = new Date().toLocaleString("en-US", {
+      timeZone: "America/New_York",
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+
     // Create lead with PENDING status (no analysis data yet)
     const lead = await db.lead.create({
       firstName, lastName, email, phone, category, employeeCount, jobTitle,
       addedBy,
-      status: 'PENDING'
+      status: 'PENDING',
+      createdAtEST
     }) as any;
 
     // Verify email via Reoon
