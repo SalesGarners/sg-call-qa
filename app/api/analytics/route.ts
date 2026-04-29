@@ -59,6 +59,9 @@ export async function GET(req: Request) {
           goodToGoCount: {
             $sum: { $cond: [{ $eq: ['$verdict', 'Good to Go (SQL)'] }, 1, 0] }
           },
+          borderlineCount: {
+            $sum: { $cond: [{ $eq: ['$verdict', 'Borderline'] }, 1, 0] }
+          },
           notQualifiedCount: {
             $sum: { $cond: [{ $eq: ['$verdict', 'Not Qualified'] }, 1, 0] }
           }
@@ -72,6 +75,7 @@ export async function GET(req: Request) {
           pushedCount: 1,
           avgScore: { $round: ['$avgScore', 1] },
           goodToGoCount: 1,
+          borderlineCount: 1,
           notQualifiedCount: 1,
           _id: 0
         }

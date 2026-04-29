@@ -15,6 +15,7 @@ import { AIProvider, AnalysisResult, ProcessingState } from '@/types';
 export default function Home() {
   const { data: session } = useSession();
   const [activeView, setActiveView] = useState<'analytics' | 'dashboard' | 'analyzer' | 'details'>('analytics');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -36,6 +37,7 @@ export default function Home() {
     category: 'Other',
     employeeCount: '',
     jobTitle: '',
+    aiProvider: '',
   });
   const [processingState, setProcessingState] = useState<ProcessingState>({
     type: '',
@@ -61,7 +63,11 @@ export default function Home() {
       category: lead.category,
       employeeCount: lead.employeeCount,
       jobTitle: lead.jobTitle || '',
+      aiProvider: lead.aiProvider || '',
     });
+    if (lead.aiProvider) {
+      setSelectedProvider(lead.aiProvider as AIProvider);
+    }
     setActiveView('analyzer');
     setCurrentStep(1);
   };
@@ -155,6 +161,7 @@ export default function Home() {
           ...normalizedData,
           status: 'ANALYZED',
           aiProvider: selectedProvider,
+          addedBy: session?.user?.name || 'Unknown',
         }, { signal });
       } else {
         // CREATE new lead with all data
@@ -164,6 +171,7 @@ export default function Home() {
           ...normalizedData,
           status: 'ANALYZED',
           aiProvider: selectedProvider,
+          addedBy: session?.user?.name || 'Unknown',
         }, { signal });
       }
       
@@ -286,21 +294,32 @@ export default function Home() {
         </header>
 
         <main>
-          {activeView === 'analytics' ? (
-            <AnalyticsDashboard />
-          ) : activeView === 'dashboard' ? (
-            <LeadDashboard onAnalyze={handleAnalyzeFromDashboard} onViewDetails={handleViewDetails} />
-          ) : activeView === 'details' ? (
+          {/* Analytics & Leads are always mounted but hidden via CSS — prevents re-fetching */}
+          <div style={{ display: activeView === 'analytics' ? 'block' : 'none' }}>
+            <AnalyticsDashboard isVisible={activeView === 'analytics'} refreshTrigger={refreshTrigger} />
+          </div>
+          <div style={{ display: activeView === 'dashboard' ? 'block' : 'none' }}>
+            <LeadDashboard 
+              onAnalyze={handleAnalyzeFromDashboard} 
+              onViewDetails={handleViewDetails} 
+              refreshTrigger={refreshTrigger}
+            />
+          </div>
+
+          {activeView === 'details' && (
             <Step3_Results
               analysisResult={analysisResult!}
               transcript={transcript}
               onReset={handleBackToDashboard}
+              onRefresh={() => setRefreshTrigger(prev => prev + 1)}
               leadId={leadId}
               leadData={leadData}
               emailStatus={emailStatus}
               status={selectedLeadStatus || undefined}
             />
-          ) : (
+          )}
+
+          {activeView === 'analyzer' && (
             <>
               {currentStep === 1 && (
                 <Step1_Upload
@@ -335,6 +354,7 @@ export default function Home() {
                   analysisResult={analysisResult}
                   transcript={transcript}
                   onReset={resetApp}
+                  onRefresh={() => setRefreshTrigger(prev => prev + 1)}
                   leadId={leadId}
                   leadData={leadData}
                   emailStatus={emailStatus}

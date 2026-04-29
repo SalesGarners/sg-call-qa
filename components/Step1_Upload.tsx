@@ -89,7 +89,11 @@ const Step1_Upload: React.FC<Step1UploadProps> = ({
       category: lead.category,
       employeeCount: lead.employeeCount,
       jobTitle: lead.jobTitle || '',
+      aiProvider: lead.aiProvider || '',
     });
+    if (lead.aiProvider) {
+      setSelectedProvider(lead.aiProvider as AIProvider);
+    }
     setSearchQuery('');
     setSearchResults([]);
   };

@@ -42,14 +42,33 @@ export async function PATCH(
     const body = await req.json();
 
     const { 
-      transcript, verdict, score, reasoning, status, aiProvider,
+      transcript, verdict: rawVerdict, score, reasoning, status, aiProvider, addedBy,
       intent, authority, demo_commitment, timeline, industry_fit, risk_level
     } = body;
+
+    // Normalize verdict to exact DB enum values
+    const normalizeVerdict = (v: string | null | undefined): string | undefined => {
+      if (!v) return undefined;
+      const lower = v.toLowerCase().trim();
+      if (lower.includes('good to go') || lower.includes('sql')) return 'Good to Go (SQL)';
+      if (lower.includes('borderline')) return 'Borderline';
+      if (lower.includes('not qualified') || lower.includes('disqualified')) return 'Not Qualified';
+      return v;
+    };
+
+    const verdict = normalizeVerdict(rawVerdict);
+
+    // Ensure score matches sum of sub-metrics
+    const calculatedScore = (Number(intent) || 0) + (Number(authority) || 0) + (Number(demo_commitment) || 0) + (Number(industry_fit) || 0);
+    const finalScore = calculatedScore > 0 ? calculatedScore : (Number(score) || 0);
+
+    // Normalize AI provider
+    const finalAiProvider = aiProvider || undefined; // Don't overwrite with null if missing in update
 
     const updated = await db.lead.update(id, {
       transcript,
       verdict,
-      score,
+      score: finalScore,
       reasoning,
       intent,
       authority,
@@ -58,7 +77,8 @@ export async function PATCH(
       industry_fit,
       risk_level,
       status: status || 'ANALYZED',
-      aiProvider
+      aiProvider: finalAiProvider,
+      addedBy
     });
 
     if (!updated) {

@@ -58,6 +58,7 @@ export const db = {
       emailStatus:    string;
       emailStatusRaw: string;
       aiProvider:     string;
+      addedBy:        string;
     }>) {
       await dbConnect();
       

@@ -91,17 +91,37 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { 
       firstName, lastName, email, phone, category, employeeCount, jobTitle, 
-      transcript, verdict, score, reasoning, status, aiProvider,
+      transcript, verdict: rawVerdict, score, reasoning, status, aiProvider, addedBy,
       intent, authority, demo_commitment, timeline, industry_fit, risk_level
     } = body;
+
+    // Normalize verdict to exact DB enum values
+    const normalizeVerdict = (v: string | null | undefined): string | undefined => {
+      if (!v) return undefined;
+      const lower = v.toLowerCase().trim();
+      if (lower.includes('good to go') || lower.includes('sql')) return 'Good to Go (SQL)';
+      if (lower.includes('borderline')) return 'Borderline';
+      if (lower.includes('not qualified') || lower.includes('disqualified')) return 'Not Qualified';
+      return v; // fallback to raw value
+    };
+
+    const verdict = normalizeVerdict(rawVerdict);
+
+    // Ensure score matches sum of sub-metrics
+    const calculatedScore = (Number(intent) || 0) + (Number(authority) || 0) + (Number(demo_commitment) || 0) + (Number(industry_fit) || 0);
+    const finalScore = calculatedScore > 0 ? calculatedScore : (Number(score) || 0);
+
+    // Normalize AI provider
+    const finalAiProvider = aiProvider || 'groq';
 
     // 1. Create lead in DB
     const lead = await db.lead.create({ 
       firstName, lastName, email, phone, category, employeeCount, jobTitle, 
-      transcript, verdict, score, reasoning, 
+      transcript, verdict, score: finalScore, reasoning, 
       intent, authority, demo_commitment, timeline, industry_fit, risk_level,
       status: status || 'ANALYZED',
-      aiProvider
+      aiProvider: finalAiProvider,
+      addedBy
     }) as any;
 
     // 2. Verify email via Reoon — quick mode (~0.5s, no SMTP)

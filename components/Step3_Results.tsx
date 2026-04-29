@@ -24,6 +24,7 @@ interface Step3ResultsProps {
   analysisResult: AnalysisResult;
   transcript: string;
   onReset: () => void;
+  onRefresh?: () => void;
   leadId: string | null;
   leadData: LeadData;
   emailStatus: string | null;
@@ -31,24 +32,26 @@ interface Step3ResultsProps {
 }
 
 const Step3_Results: React.FC<Step3ResultsProps> = ({
-  analysisResult, transcript, onReset, leadId, leadData, emailStatus, status
+  analysisResult, transcript, onReset, onRefresh, leadId, leadData, emailStatus, status
 }) => {
   const [activeTab, setActiveTab] = useState<'score' | 'transcript'>('score');
   const [pushStatus, setPushStatus] = useState<'idle' | 'pushing' | 'success' | 'error'>('idle');
   const [pushError, setPushError] = useState('');
+  const [currentVerdict, setCurrentVerdict] = useState(analysisResult?.verdict);
+  const [isDisqualifying, setIsDisqualifying] = useState(false);
 
   if (!analysisResult) return null;
 
-  const { verdict, score, intent, authority, demo_commitment, timeline, industry_fit, reasoning, risk_level } = analysisResult;
+  const { score, intent, authority, demo_commitment, timeline, industry_fit, reasoning, risk_level } = analysisResult;
 
   const getVerdictConfig = () => {
-    if (verdict === 'Good to Go (SQL)') return {
+    if (currentVerdict === 'Good to Go (SQL)') return {
       bg: 'var(--color-green-bg)', border: 'var(--color-green)', color: 'var(--color-green)',
       icon: <CheckCircle2 size={20} />, label: 'Good to Go (SQL)',
       guidance: 'Score 70+. Strong potential — proceed with sales follow-up.',
       tagBg: '#d4edda', tagColor: '#155724'
     };
-    if (verdict === 'Borderline') return {
+    if (currentVerdict === 'Borderline') return {
       bg: 'var(--color-amber-bg)', border: 'var(--color-amber)', color: 'var(--color-amber)',
       icon: <AlertCircle size={20} />, label: 'Borderline',
       guidance: 'Score 50–69. Review manually — accept if authority is strong.',
@@ -57,7 +60,7 @@ const Step3_Results: React.FC<Step3ResultsProps> = ({
     return {
       bg: 'var(--color-red-bg)', border: 'var(--color-red)', color: 'var(--color-red)',
       icon: <XCircle size={20} />, label: 'Not Qualified',
-      guidance: 'Score below 50. Does not meet qualification criteria.',
+      guidance: 'Lead has been disqualified manually or by score.',
       tagBg: '#f8d7da', tagColor: '#721c24'
     };
   };
@@ -70,14 +73,34 @@ const Step3_Results: React.FC<Step3ResultsProps> = ({
 
   const metrics = [
     { name: 'Authority',       score: authority || 0,       max: 40, color: 'var(--color-primary)' },
-    { name: 'Intent',          score: intent || 0,          max: 25, color: 'var(--color-green)' },
+    { name: 'Intent',          score: intent || 0,          max: 30, color: 'var(--color-green)' },
     { name: 'Demo Commitment', score: demo_commitment || 0, max: 15, color: 'var(--color-amber)' },
-    { name: 'Timeline',        score: timeline || 0,        max: 10, color: 'var(--color-primary-dark)' },
-    { name: 'Industry Fit',    score: industry_fit || 0,    max: 10, color: '#6366f1' },
+    { name: 'Industry Fit',    score: industry_fit || 0,    max: 15, color: '#6366f1' },
   ];
 
-  // Calculate the total score from the breakdown to ensure consistency
+  // Calculate the total score from the breakdown to ensure consistency in the UI
   const calculatedScore = metrics.reduce((acc, m) => acc + m.score, 0);
+
+  const handleDisqualify = async () => {
+    if (!leadId) return;
+    if (!confirm('Are you sure you want to disqualify this lead? This will mark it as Not Qualified in the database.')) return;
+    
+    setIsDisqualifying(true);
+    try {
+      await axios.patch(`/api/leads/${leadId}`, {
+        verdict: 'Not Qualified',
+        score: 0 // Optional: set score to 0 when disqualified manually
+      });
+      setCurrentVerdict('Not Qualified');
+      onRefresh?.();
+      alert('Lead has been disqualified.');
+    } catch (err) {
+      console.error('Disqualification failed:', err);
+      alert('Failed to update lead status. Please try again.');
+    } finally {
+      setIsDisqualifying(false);
+    }
+  };
 
   return (
     <div style={styles.wrapper}>
@@ -164,7 +187,7 @@ const Step3_Results: React.FC<Step3ResultsProps> = ({
               <div style={{
                 ...styles.barFill,
                 width: `${score}%`,
-                backgroundColor: score >= 70 ? 'var(--color-green)' : score >= 40 ? 'var(--color-amber)' : 'var(--color-red)',
+                backgroundColor: score >= 70 ? 'var(--color-green)' : score >= 50 ? 'var(--color-amber)' : 'var(--color-red)',
               }} />
             </div>
             <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px', display: 'block' }}>
@@ -219,50 +242,89 @@ const Step3_Results: React.FC<Step3ResultsProps> = ({
             <p style={styles.reasoning}>{reasoning}</p>
           </div>
 
-          {/* CRM Push */}
+          {/* CRM Push & Disqualify */}
           {leadId && (
-            <div className="card" style={{ ...styles.section, border: '1px solid var(--color-primary)', background: 'rgba(79, 70, 229, 0.03)' }}>
-              <div style={styles.crmHeader}>
-                <Database size={18} color="var(--color-primary)" />
-                <h3 style={styles.sectionTitle}>Push to HubSpot CRM</h3>
-              </div>
-              <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '14px' }}>
-                Lead is saved locally. Click below to sync it to your HubSpot portal.
-              </p>
-              {pushStatus === 'success' || status === 'PUSHED_TO_CRM' ? (
-                <div style={styles.successBanner}>
-                  <CheckCircle2 size={16} />
-                  <span>{status === 'PUSHED_TO_CRM' ? 'This lead is already in your CRM' : 'Successfully pushed to HubSpot!'}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="card" style={{ ...styles.section, border: '1px solid var(--color-primary)', background: 'rgba(79, 70, 229, 0.03)' }}>
+                <div style={styles.crmHeader}>
+                  <Database size={18} color="var(--color-primary)" />
+                  <h3 style={styles.sectionTitle}>Push to HubSpot CRM</h3>
                 </div>
-              ) : (
-                <>
-                  <button
-                    className="primary-button"
-                    disabled={pushStatus === 'pushing'}
-                    onClick={async () => {
-                      setPushStatus('pushing');
-                      try {
-                        await axios.post(`/api/leads/${leadId}`);
-                        setPushStatus('success');
-                      } catch (err: any) {
-                        setPushStatus('error');
-                        setPushError(err.response?.data?.error || 'Failed to push to CRM');
-                      }
-                    }}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '14px' }}
-                  >
-                    <Send size={15} />
-                    {pushStatus === 'pushing' ? 'Pushing...' : 'Push to HubSpot CRM'}
-                  </button>
-                  {pushStatus === 'error' && (
-                    <p style={{ color: 'var(--color-red)', fontSize: '12px', marginTop: '8px' }}>{pushError}</p>
-                  )}
-                  {score < 50 && (
-                    <p style={{ fontSize: '12px', color: 'var(--color-amber)', marginTop: '8px' }}>
-                      ⚠️ Low score — review manually before pushing.
-                    </p>
-                  )}
-                </>
+                <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '14px' }}>
+                  Lead is saved locally. Click below to sync it to your HubSpot portal.
+                </p>
+                {pushStatus === 'success' || status === 'PUSHED_TO_CRM' ? (
+                  <div style={styles.successBanner}>
+                    <CheckCircle2 size={16} />
+                    <span>{status === 'PUSHED_TO_CRM' ? 'This lead is already in your CRM' : 'Successfully pushed to HubSpot!'}</span>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      className="primary-button"
+                      disabled={pushStatus === 'pushing' || currentVerdict === 'Not Qualified'}
+                      onClick={async () => {
+                        setPushStatus('pushing');
+                        try {
+                          await axios.post(`/api/leads/${leadId}`);
+                          setPushStatus('success');
+                        } catch (err: any) {
+                          setPushStatus('error');
+                          setPushError(err.response?.data?.error || 'Failed to push to CRM');
+                        }
+                      }}
+                      style={{ 
+                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '14px',
+                        opacity: currentVerdict === 'Not Qualified' ? 0.6 : 1
+                      }}
+                    >
+                      <Send size={15} />
+                      {pushStatus === 'pushing' ? 'Pushing...' : 'Push to HubSpot CRM'}
+                    </button>
+                    {pushStatus === 'error' && (
+                      <p style={{ color: 'var(--color-red)', fontSize: '12px', marginTop: '8px' }}>{pushError}</p>
+                    )}
+                    {currentVerdict === 'Not Qualified' && (
+                      <p style={{ fontSize: '12px', color: 'var(--color-red)', marginTop: '8px', fontWeight: '500' }}>
+                        🚫 This lead is disqualified and cannot be pushed to CRM.
+                      </p>
+                    )}
+                    {currentVerdict === 'Borderline' && (
+                      <p style={{ fontSize: '12px', color: 'var(--color-amber)', marginTop: '8px' }}>
+                        ⚠️ Borderline lead — review manually before pushing.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Manual Disqualification Button (Only for SQL/Borderline) */}
+              {(currentVerdict === 'Good to Go (SQL)' || currentVerdict === 'Borderline') && (
+                <button
+                  onClick={handleDisqualify}
+                  disabled={isDisqualifying}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--color-red)',
+                    backgroundColor: 'white',
+                    color: 'var(--color-red)',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-red-bg)'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'white'; }}
+                >
+                  <XCircle size={16} />
+                  {isDisqualifying ? 'Disqualifying...' : 'Disqualify Lead'}
+                </button>
               )}
             </div>
           )}
