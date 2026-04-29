@@ -43,6 +43,8 @@ export interface LeadRecord extends LeadData {
   status: 'PENDING' | 'ANALYZED' | 'PUSHED_TO_CRM';
   emailStatus?: string | null;
   emailStatusRaw?: string | null;
+  aiProvider?: string;
+  addedBy?: string;
   createdAt: string;
   updatedAt: string;
 }

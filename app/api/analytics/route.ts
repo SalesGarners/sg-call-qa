@@ -2,21 +2,45 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Lead from '@/lib/models/Lead';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const startDateParam = searchParams.get('startDate');
+    const endDateParam = searchParams.get('endDate');
+
+    const parseDateParam = (param: string | null) => {
+      if (!param || param === 'undefined' || param === 'null' || param.trim() === '') return null;
+      return param;
+    };
+
+    const start = parseDateParam(startDateParam);
+    const end = parseDateParam(endDateParam);
+    
+    const baseQuery: any = {};
+    if (start || end) {
+      baseQuery.createdAt = {};
+      if (start) {
+        baseQuery.createdAt.$gte = new Date(`${start}T00:00:00.000`);
+      }
+      if (end) {
+        baseQuery.createdAt.$lte = new Date(`${end}T23:59:59.999`);
+      }
+    }
+
     await dbConnect();
 
     // 1. Fetch KPI Totals
-    const totalLeads = await Lead.countDocuments();
-    const analyzedLeads = await Lead.countDocuments({ status: { $in: ['ANALYZED', 'PUSHED_TO_CRM'] } });
-    const pushedLeads = await Lead.countDocuments({ status: 'PUSHED_TO_CRM' });
-    const disqualifiedLeads = await Lead.countDocuments({ verdict: 'Not Qualified' });
+    const totalLeads = await Lead.countDocuments(baseQuery);
+    const analyzedLeads = await Lead.countDocuments({ ...baseQuery, status: { $in: ['ANALYZED', 'PUSHED_TO_CRM'] } });
+    const pushedLeads = await Lead.countDocuments({ ...baseQuery, status: 'PUSHED_TO_CRM' });
+    const disqualifiedLeads = await Lead.countDocuments({ ...baseQuery, verdict: 'Not Qualified' });
 
     // 2. Fetch Agent Performance Leaderboard
     const agentPerformance = await Lead.aggregate([
       {
         $match: {
-          addedBy: { $ne: null, $exists: true } // Only include leads added by agents
+          addedBy: { $ne: null, $exists: true }, // Only include leads added by agents
+          ...baseQuery
         }
       },
       {
@@ -35,6 +59,9 @@ export async function GET() {
           goodToGoCount: {
             $sum: { $cond: [{ $eq: ['$verdict', 'Good to Go (SQL)'] }, 1, 0] }
           },
+          borderlineCount: {
+            $sum: { $cond: [{ $eq: ['$verdict', 'Borderline'] }, 1, 0] }
+          },
           notQualifiedCount: {
             $sum: { $cond: [{ $eq: ['$verdict', 'Not Qualified'] }, 1, 0] }
           }
@@ -48,6 +75,7 @@ export async function GET() {
           pushedCount: 1,
           avgScore: { $round: ['$avgScore', 1] },
           goodToGoCount: 1,
+          borderlineCount: 1,
           notQualifiedCount: 1,
           _id: 0
         }
@@ -58,7 +86,7 @@ export async function GET() {
     // 3. Verdict Distribution
     const verdictDistribution = await Lead.aggregate([
       {
-        $match: { verdict: { $ne: null } }
+        $match: { verdict: { $ne: null }, ...baseQuery }
       },
       {
         $group: {

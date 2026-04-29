@@ -36,14 +36,35 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('q');
+    const startDateParam = searchParams.get('startDate');
+    const endDateParam = searchParams.get('endDate');
+
+    const parseDateParam = (param: string | null) => {
+      if (!param || param === 'undefined' || param === 'null' || param.trim() === '') return null;
+      return param;
+    };
+
+    const start = parseDateParam(startDateParam);
+    const end = parseDateParam(endDateParam);
+    
+    const filter: any = {};
+    if (start || end) {
+      filter.createdAt = {};
+      if (start) {
+        filter.createdAt.$gte = new Date(`${start}T00:00:00.000`);
+      }
+      if (end) {
+        filter.createdAt.$lte = new Date(`${end}T23:59:59.999`);
+      }
+    }
 
     if (query && query.trim().length >= 2) {
-      const results = await db.lead.search(query.trim());
+      const results = await db.lead.search(query.trim(), filter);
       return NextResponse.json(results);
     }
 
     // If no query, return all leads (prioritized by PENDING)
-    const allLeads = await db.lead.findMany();
+    const allLeads = await db.lead.findMany(filter);
     // Sort logic in db.lead.findMany is by newest first, 
     // let's ensure PENDING are at the top here or in DB layer.
     // Actually, db.lead.findMany already sorts by createdAt.
@@ -70,16 +91,37 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { 
       firstName, lastName, email, phone, category, employeeCount, jobTitle, 
-      transcript, verdict, score, reasoning, status,
+      transcript, verdict: rawVerdict, score, reasoning, status, aiProvider, addedBy,
       intent, authority, demo_commitment, timeline, industry_fit, risk_level
     } = body;
+
+    // Normalize verdict to exact DB enum values
+    const normalizeVerdict = (v: string | null | undefined): string | undefined => {
+      if (!v) return undefined;
+      const lower = v.toLowerCase().trim();
+      if (lower.includes('good to go') || lower.includes('sql')) return 'Good to Go (SQL)';
+      if (lower.includes('borderline')) return 'Borderline';
+      if (lower.includes('not qualified') || lower.includes('disqualified')) return 'Not Qualified';
+      return v; // fallback to raw value
+    };
+
+    const verdict = normalizeVerdict(rawVerdict);
+
+    // Ensure score matches sum of sub-metrics
+    const calculatedScore = (Number(intent) || 0) + (Number(authority) || 0) + (Number(demo_commitment) || 0) + (Number(industry_fit) || 0);
+    const finalScore = calculatedScore > 0 ? calculatedScore : (Number(score) || 0);
+
+    // Normalize AI provider
+    const finalAiProvider = aiProvider || 'groq';
 
     // 1. Create lead in DB
     const lead = await db.lead.create({ 
       firstName, lastName, email, phone, category, employeeCount, jobTitle, 
-      transcript, verdict, score, reasoning, 
+      transcript, verdict, score: finalScore, reasoning, 
       intent, authority, demo_commitment, timeline, industry_fit, risk_level,
-      status: status || 'ANALYZED' 
+      status: status || 'ANALYZED',
+      aiProvider: finalAiProvider,
+      addedBy
     }) as any;
 
     // 2. Verify email via Reoon — quick mode (~0.5s, no SMTP)

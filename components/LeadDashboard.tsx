@@ -8,9 +8,10 @@ import ExcelJS from 'exceljs';
 interface LeadDashboardProps {
   onAnalyze: (lead: LeadRecord) => void;
   onViewDetails: (lead: LeadRecord) => void;
+  refreshTrigger?: number;
 }
 
-export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboardProps) {
+export default function LeadDashboard({ onAnalyze, onViewDetails, refreshTrigger = 0 }: LeadDashboardProps) {
   const [leads, setLeads] = useState<LeadRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,6 +19,20 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'ANALYZED' | 'PUSHED_TO_CRM'>('ALL');
   const [scoreSort, setScoreSort] = useState<'NONE' | 'ASC' | 'DESC'>('NONE');
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const getLocalDateString = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return getLocalDateString(d);
+  });
+  const [endDate, setEndDate] = useState(() => getLocalDateString(new Date()));
   
   // Drag to scroll logic
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -31,6 +46,7 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
 
     // Define columns with widths for a better look
     worksheet.columns = [
+      { header: 'Date', key: 'date', width: 15 },
       { header: 'Category', key: 'category', width: 20 },
       { header: 'First Name', key: 'firstName', width: 15 },
       { header: 'Last Name', key: 'lastName', width: 15 },
@@ -39,6 +55,8 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
       { header: 'Phone', key: 'phone', width: 20 },
       { header: 'Employee Count', key: 'employeeCount', width: 15 },
       { header: 'Lead Status', key: 'status', width: 15 },
+      { header: 'AI Provider', key: 'aiProvider', width: 15 },
+      { header: 'Agent', key: 'addedBy', width: 20 },
       { header: 'Lead Scoring', key: 'score', width: 15 },
       { header: 'QA Analyst Note', key: 'reasoning', width: 40 },
       { header: 'Transcript', key: 'transcript', width: 50 },
@@ -48,6 +66,7 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
     // Add data
     filteredLeads.forEach(lead => {
       worksheet.addRow({
+        date: new Date(lead.createdAt).toLocaleDateString(),
         category: lead.category,
         firstName: lead.firstName,
         lastName: lead.lastName,
@@ -56,6 +75,8 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
         phone: lead.phone,
         employeeCount: lead.employeeCount,
         status: lead.status === 'PENDING' ? 'Pending' : lead.status,
+        aiProvider: lead.aiProvider || '',
+        addedBy: lead.addedBy || '',
         score: lead.status === 'PENDING' ? '' : (lead.score || 0),
         reasoning: lead.status === 'PENDING' ? '' : (lead.reasoning || ''),
         transcript: lead.status === 'PENDING' ? '' : (lead.transcript || ''),
@@ -109,7 +130,7 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
     if (!silent) setLoading(true);
     setIsRefreshing(true);
     try {
-      const res = await fetch('/api/leads');
+      const res = await fetch(`/api/leads?startDate=${startDate}&endDate=${endDate}`);
       if (!res.ok) throw new Error('Failed to fetch leads');
       const data = await res.json();
       setLeads(data);
@@ -124,7 +145,13 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
 
   useEffect(() => {
     fetchLeads();
-  }, []);
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      fetchLeads(true); // Silent refresh
+    }
+  }, [refreshTrigger]);
 
   const filteredLeads = leads.filter(lead => {
     // 1. Search term filter
@@ -203,6 +230,28 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
 
         <div style={styles.filterSection}>
           <div style={styles.filterGroup}>
+            <span style={styles.filterLabel}>Date:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '0 8px', backgroundColor: 'white', height: '36px' }}>
+              <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600' }}>From:</span>
+              <input 
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                max={endDate}
+                style={styles.dateInput}
+              />
+              <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: '600' }}>To:</span>
+              <input 
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate}
+                style={styles.dateInput}
+              />
+            </div>
+          </div>
+
+          <div style={styles.filterGroup}>
             <span style={styles.filterLabel}>Status:</span>
             <select 
               style={styles.select}
@@ -264,14 +313,16 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
           <table style={styles.table}>
             <thead>
               <tr>
-                <th style={{ ...styles.th, width: '100px', borderRight: '1px solid var(--color-border)' }}>Date</th>
-                <th style={{ ...styles.th, ...styles.stickyCol, left: 0, width: '200px', borderRight: '1px solid var(--color-border)', zIndex: 11 }}>Lead Name</th>
-                <th style={{ ...styles.th, width: '160px', borderRight: '1px solid var(--color-border)' }}>Phone</th>
-                <th style={{ ...styles.th, width: '220px', borderRight: '1px solid var(--color-border)' }}>Email</th>
-                <th style={{ ...styles.th, width: '140px', borderRight: '1px solid var(--color-border)' }}>Category</th>
-                <th style={{ ...styles.th, width: '100px', borderRight: '1px solid var(--color-border)' }}>Employees</th>
-                <th style={{ ...styles.th, width: '100px', borderRight: '1px solid var(--color-border)' }}>Score</th>
-                <th style={{ ...styles.th, textAlign: 'center', width: '120px' }}>Action</th>
+                <th style={{ ...styles.th, width: '110px', minWidth: '110px', borderRight: '1px solid var(--color-border)' }}>Date</th>
+                <th style={{ ...styles.th, ...styles.stickyCol, left: 0, width: '200px', minWidth: '200px', borderRight: '1px solid var(--color-border)', zIndex: 11, backgroundColor: '#F9FAFB' }}>Lead Name</th>
+                <th style={{ ...styles.th, width: '160px', minWidth: '160px', borderRight: '1px solid var(--color-border)' }}>Phone</th>
+                <th style={{ ...styles.th, width: '240px', minWidth: '240px', borderRight: '1px solid var(--color-border)' }}>Email</th>
+                <th style={{ ...styles.th, width: '170px', minWidth: '170px', borderRight: '1px solid var(--color-border)' }}>Category</th>
+                <th style={{ ...styles.th, width: '110px', minWidth: '110px', borderRight: '1px solid var(--color-border)' }}>Employees</th>
+                <th style={{ ...styles.th, width: '130px', minWidth: '130px', borderRight: '1px solid var(--color-border)' }}>AI Provider</th>
+                <th style={{ ...styles.th, width: '150px', minWidth: '150px', borderRight: '1px solid var(--color-border)' }}>Agent</th>
+                <th style={{ ...styles.th, width: '100px', minWidth: '100px', borderRight: '1px solid var(--color-border)' }}>Score</th>
+                <th style={{ ...styles.th, textAlign: 'center', width: '130px', minWidth: '130px' }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -286,7 +337,8 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
                       ...styles.stickyCol, 
                       left: 0, 
                       width: '200px',
-                      backgroundColor: 'inherit',
+                      minWidth: '200px',
+                      backgroundColor: 'white',
                       borderRight: '1px solid var(--color-border)',
                       cursor: lead.status === 'PENDING' ? 'default' : 'pointer' 
                     }}
@@ -318,6 +370,20 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
                     </span>
                   </td>
                   <td style={{ ...styles.td, borderRight: '1px solid var(--color-border)' }}>
+                    <span style={{ 
+                      fontSize: '11px', fontWeight: '600', padding: '3px 8px', borderRadius: '4px',
+                      backgroundColor: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0',
+                      textTransform: 'capitalize'
+                    }}>
+                      {lead.aiProvider || '—'}
+                    </span>
+                  </td>
+                  <td style={{ ...styles.td, borderRight: '1px solid var(--color-border)' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-text-main)' }}>
+                      {lead.addedBy || '—'}
+                    </span>
+                  </td>
+                  <td style={{ ...styles.td, borderRight: '1px solid var(--color-border)' }}>
                     {lead.status === 'PENDING' ? (
                       <span style={{ 
                         fontSize: '11px', fontWeight: '600', padding: '4px 8px', borderRadius: '4px',
@@ -329,8 +395,8 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
                       <div style={{ 
                         width: '32px', height: '32px', borderRadius: '6px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '700',
-                        backgroundColor: lead.score >= 70 ? 'var(--color-green-bg)' : lead.score >= 40 ? 'var(--color-amber-bg)' : 'var(--color-red-bg)',
-                        color: lead.score >= 70 ? 'var(--color-green)' : lead.score >= 40 ? 'var(--color-amber)' : 'var(--color-red)',
+                        backgroundColor: lead.score >= 70 ? 'var(--color-green-bg)' : lead.score >= 50 ? 'var(--color-amber-bg)' : 'var(--color-red-bg)',
+                        color: lead.score >= 70 ? 'var(--color-green)' : lead.score >= 50 ? 'var(--color-amber)' : 'var(--color-red)',
                         border: '1px solid currentColor'
                       }}>
                         {lead.score}
@@ -368,7 +434,7 @@ export default function LeadDashboard({ onAnalyze, onViewDetails }: LeadDashboar
               ))}
               {filteredLeads.length === 0 && (
                 <tr>
-                  <td colSpan={8} style={{ ...styles.td, textAlign: 'center', padding: '60px', color: 'var(--color-text-muted)' }}>
+                  <td colSpan={10} style={{ ...styles.td, textAlign: 'center', padding: '60px', color: 'var(--color-text-muted)' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                       <Search size={32} strokeWidth={1} />
                       <p>No leads found matching your search.</p>
@@ -398,7 +464,12 @@ const styles: Record<string, React.CSSProperties> = {
   select: {
     padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--color-border)', 
     fontSize: '13px', fontWeight: '500', outline: 'none', cursor: 'pointer', backgroundColor: 'white',
-    color: 'var(--color-text-main)', minWidth: '130px'
+    color: 'var(--color-text-main)', minWidth: '130px', height: '36px'
+  },
+  dateInput: {
+    border: 'none', backgroundColor: 'transparent', height: '100%', 
+    padding: '4px 0px', fontSize: '13px', fontWeight: '500', color: 'var(--color-text-main)',
+    outline: 'none', cursor: 'text'
   },
   searchInput: { flex: 1, border: 'none', outline: 'none', fontSize: '14px', backgroundColor: 'transparent', padding: '8px 0' },
   tableCard: { padding: 0, overflow: 'hidden', border: '1px solid var(--color-border)' },
@@ -410,11 +481,11 @@ const styles: Record<string, React.CSSProperties> = {
     borderBottomRightRadius: '12px',
   },
   table: { 
-    width: '100%', 
+    minWidth: '1500px',
     borderCollapse: 'separate', 
     borderSpacing: 0, 
     fontSize: '13px', 
-    textAlign: 'left' 
+    textAlign: 'left'
   },
   stickyCol: {
     position: 'sticky',
@@ -428,7 +499,7 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: 'nowrap',
   },
   tr: { borderBottom: '1px solid var(--color-border)', transition: 'background-color 0.2s' },
-  td: { padding: '16px', verticalAlign: 'middle' },
+  td: { padding: '16px', verticalAlign: 'middle', whiteSpace: 'nowrap' },
   badge: {
     display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px',
     borderRadius: '99px', fontSize: '11px', fontWeight: '600',
