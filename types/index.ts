@@ -45,6 +45,7 @@ export interface LeadRecord extends LeadData {
   emailStatusRaw?: string | null;
   aiProvider?: string;
   addedBy?: string;
+  createdAtEST?: string;
   createdAt: string;
   updatedAt: string;
 }

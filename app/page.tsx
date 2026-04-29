@@ -175,6 +175,7 @@ export default function Home() {
         }, { signal });
       }
       
+      setLeadData(prev => ({ ...prev, aiProvider: selectedProvider }));
       setLeadId(leadResponse.data.id);
       setEmailStatus(leadResponse.data.emailStatus ?? null);
 

@@ -46,17 +46,17 @@ export default function LeadDashboard({ onAnalyze, onViewDetails, refreshTrigger
 
     // Define columns with widths for a better look
     worksheet.columns = [
-      { header: 'Date', key: 'date', width: 15 },
-      { header: 'Category', key: 'category', width: 20 },
+      { header: 'Date & Time (EST)', key: 'date', width: 22 },
+      { header: 'Agent', key: 'addedBy', width: 20 },
       { header: 'First Name', key: 'firstName', width: 15 },
       { header: 'Last Name', key: 'lastName', width: 15 },
       { header: 'Title', key: 'jobTitle', width: 25 },
+      { header: 'Category', key: 'category', width: 20 },
       { header: 'Email', key: 'email', width: 30 },
       { header: 'Phone', key: 'phone', width: 20 },
       { header: 'Employee Count', key: 'employeeCount', width: 15 },
       { header: 'Lead Status', key: 'status', width: 15 },
       { header: 'AI Provider', key: 'aiProvider', width: 15 },
-      { header: 'Agent', key: 'addedBy', width: 20 },
       { header: 'Lead Scoring', key: 'score', width: 15 },
       { header: 'QA Analyst Note', key: 'reasoning', width: 40 },
       { header: 'Transcript', key: 'transcript', width: 50 },
@@ -66,17 +66,17 @@ export default function LeadDashboard({ onAnalyze, onViewDetails, refreshTrigger
     // Add data
     filteredLeads.forEach(lead => {
       worksheet.addRow({
-        date: new Date(lead.createdAt).toLocaleDateString(),
-        category: lead.category,
+        date: lead.createdAtEST || new Date(lead.createdAt).toLocaleString(),
+        addedBy: lead.addedBy || '',
         firstName: lead.firstName,
         lastName: lead.lastName,
         jobTitle: lead.jobTitle || '',
+        category: lead.category,
         email: lead.email,
         phone: lead.phone,
         employeeCount: lead.employeeCount,
         status: lead.status === 'PENDING' ? 'Pending' : lead.status,
         aiProvider: lead.aiProvider || '',
-        addedBy: lead.addedBy || '',
         score: lead.status === 'PENDING' ? '' : (lead.score || 0),
         reasoning: lead.status === 'PENDING' ? '' : (lead.reasoning || ''),
         transcript: lead.status === 'PENDING' ? '' : (lead.transcript || ''),
@@ -313,14 +313,14 @@ export default function LeadDashboard({ onAnalyze, onViewDetails, refreshTrigger
           <table style={styles.table}>
             <thead>
               <tr>
-                <th style={{ ...styles.th, width: '110px', minWidth: '110px', borderRight: '1px solid var(--color-border)' }}>Date</th>
+                <th style={{ ...styles.th, width: '180px', minWidth: '180px', borderRight: '1px solid var(--color-border)' }}>Date (EST)</th>
+                <th style={{ ...styles.th, width: '150px', minWidth: '150px', borderRight: '1px solid var(--color-border)' }}>Agent</th>
                 <th style={{ ...styles.th, ...styles.stickyCol, left: 0, width: '200px', minWidth: '200px', borderRight: '1px solid var(--color-border)', zIndex: 11, backgroundColor: '#F9FAFB' }}>Lead Name</th>
                 <th style={{ ...styles.th, width: '160px', minWidth: '160px', borderRight: '1px solid var(--color-border)' }}>Phone</th>
                 <th style={{ ...styles.th, width: '240px', minWidth: '240px', borderRight: '1px solid var(--color-border)' }}>Email</th>
                 <th style={{ ...styles.th, width: '170px', minWidth: '170px', borderRight: '1px solid var(--color-border)' }}>Category</th>
                 <th style={{ ...styles.th, width: '110px', minWidth: '110px', borderRight: '1px solid var(--color-border)' }}>Employees</th>
                 <th style={{ ...styles.th, width: '130px', minWidth: '130px', borderRight: '1px solid var(--color-border)' }}>AI Provider</th>
-                <th style={{ ...styles.th, width: '150px', minWidth: '150px', borderRight: '1px solid var(--color-border)' }}>Agent</th>
                 <th style={{ ...styles.th, width: '100px', minWidth: '100px', borderRight: '1px solid var(--color-border)' }}>Score</th>
                 <th style={{ ...styles.th, textAlign: 'center', width: '130px', minWidth: '130px' }}>Action</th>
               </tr>
@@ -328,8 +328,13 @@ export default function LeadDashboard({ onAnalyze, onViewDetails, refreshTrigger
             <tbody>
               {filteredLeads.map((lead) => (
                 <tr key={lead.id} style={styles.tr}>
+                  <td style={{ ...styles.td, borderRight: '1px solid var(--color-border)', fontSize: '12px' }}>
+                    {lead.createdAtEST || new Date(lead.createdAt).toLocaleDateString()}
+                  </td>
                   <td style={{ ...styles.td, borderRight: '1px solid var(--color-border)' }}>
-                    {new Date(lead.createdAt).toLocaleDateString()}
+                    <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-text-main)' }}>
+                      {lead.addedBy || '—'}
+                    </span>
                   </td>
                   <td 
                     style={{ 
@@ -376,11 +381,6 @@ export default function LeadDashboard({ onAnalyze, onViewDetails, refreshTrigger
                       textTransform: 'capitalize'
                     }}>
                       {lead.aiProvider || '—'}
-                    </span>
-                  </td>
-                  <td style={{ ...styles.td, borderRight: '1px solid var(--color-border)' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-text-main)' }}>
-                      {lead.addedBy || '—'}
                     </span>
                   </td>
                   <td style={{ ...styles.td, borderRight: '1px solid var(--color-border)' }}>

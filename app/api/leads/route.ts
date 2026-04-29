@@ -51,10 +51,14 @@ export async function GET(req: Request) {
     if (start || end) {
       filter.createdAt = {};
       if (start) {
-        filter.createdAt.$gte = new Date(`${start}T00:00:00.000`);
+        // new Date('YYYY-MM-DD') defaults to UTC midnight, which is what we want
+        filter.createdAt.$gte = new Date(start);
       }
       if (end) {
-        filter.createdAt.$lte = new Date(`${end}T23:59:59.999`);
+        // For the end date, we want to include the entire day up to 23:59:59 UTC
+        const endDay = new Date(end);
+        endDay.setUTCHours(23, 59, 59, 999);
+        filter.createdAt.$lte = endDay;
       }
     }
 
@@ -114,6 +118,18 @@ export async function POST(req: Request) {
     // Normalize AI provider
     const finalAiProvider = aiProvider || 'groq';
 
+    // Record time in EST
+    const createdAtEST = new Date().toLocaleString("en-US", {
+      timeZone: "America/New_York",
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+
     // 1. Create lead in DB
     const lead = await db.lead.create({ 
       firstName, lastName, email, phone, category, employeeCount, jobTitle, 
@@ -121,7 +137,8 @@ export async function POST(req: Request) {
       intent, authority, demo_commitment, timeline, industry_fit, risk_level,
       status: status || 'ANALYZED',
       aiProvider: finalAiProvider,
-      addedBy
+      addedBy,
+      createdAtEST
     }) as any;
 
     // 2. Verify email via Reoon — quick mode (~0.5s, no SMTP)

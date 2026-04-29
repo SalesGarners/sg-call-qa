@@ -20,10 +20,14 @@ export async function GET(req: Request) {
     if (start || end) {
       baseQuery.createdAt = {};
       if (start) {
-        baseQuery.createdAt.$gte = new Date(`${start}T00:00:00.000`);
+        // new Date('YYYY-MM-DD') defaults to UTC midnight
+        baseQuery.createdAt.$gte = new Date(start);
       }
       if (end) {
-        baseQuery.createdAt.$lte = new Date(`${end}T23:59:59.999`);
+        // Include full end day in UTC
+        const endDay = new Date(end);
+        endDay.setUTCHours(23, 59, 59, 999);
+        baseQuery.createdAt.$lte = endDay;
       }
     }
 
