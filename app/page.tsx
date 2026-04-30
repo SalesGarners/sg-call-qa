@@ -10,10 +10,20 @@ import LeadDashboard from '@/components/LeadDashboard';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 import Sidebar from '@/components/Sidebar';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { AIProvider, AnalysisResult, ProcessingState } from '@/types';
 
 export default function Home() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  
+  // Redirect agents to the intake form if they land on the home page
+  React.useEffect(() => {
+    if (status === 'authenticated' && (session?.user as any)?.role === 'agent') {
+      router.push('/agent');
+    }
+  }, [session, status, router]);
+
   const [activeView, setActiveView] = useState<'analytics' | 'dashboard' | 'analyzer' | 'details'>('analytics');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);

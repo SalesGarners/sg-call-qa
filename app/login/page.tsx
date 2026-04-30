@@ -1,62 +1,96 @@
 'use client';
 
-import React, { useState } from 'react';
-import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { signIn, useSession } from 'next-auth/react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Loader2, Lock } from 'lucide-react';
 
 export default function LoginPage() {
+  const { data: session, status } = useSession();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/';
+
+  // If already logged in, redirect to appropriate page
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      const role = (session.user as any).role;
+      if (role === 'agent') {
+        router.push('/agent');
+      } else {
+        router.push('/');
+      }
+    }
+  }, [status, session, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
+    
     setIsLoading(true);
     setError(null);
 
     try {
+      // We use redirect: false to handle errors manually in the UI
       const res = await signIn('credentials', {
         redirect: false,
-        username,
-        password,
+        username: username.trim(),
+        password: password.trim(),
+        callbackUrl,
       });
 
       if (res?.error) {
         setError('Invalid username or password');
         setIsLoading(false);
       } else if (res?.ok) {
-        // Redirect to homepage
-        router.push('/');
-        router.refresh();
+        // Successful login - allow the useEffect above to handle redirection 
+        // OR trigger a hard refresh to be safe
+        window.location.href = res.url || callbackUrl;
       }
     } catch (err) {
+      console.error('Login error:', err);
       setError('Something went wrong. Please try again.');
       setIsLoading(false);
     }
   };
 
+  if (status === 'loading') {
+    return (
+      <div style={styles.container}>
+        <Loader2 size={32} className="spin" style={{ color: 'var(--color-primary)' }} />
+      </div>
+    );
+  }
+
   return (
     <div style={styles.container}>
       <div className="card fade-in" style={styles.card}>
-        <h2 className="outfit-font" style={{ textAlign: 'center', marginBottom: '24px', fontSize: '24px', fontWeight: '700' }}>
+        <div style={styles.iconHeader}>
+          <div style={styles.lockCircle}>
+            <Lock size={24} color="var(--color-primary)" />
+          </div>
+        </div>
+        
+        <h2 className="outfit-font" style={{ textAlign: 'center', marginBottom: '12px', fontSize: '26px', fontWeight: '800', color: 'var(--color-text-main)' }}>
           Welcome Back
         </h2>
         <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', marginBottom: '32px', fontSize: '14px' }}>
-          Please enter your credentials to access the Call QA dashboard.
+          Please enter your credentials to access the platform.
         </p>
 
         {error && (
-          <div style={{ backgroundColor: 'var(--color-red-bg)', color: 'var(--color-red)', padding: '12px', borderRadius: '8px', marginBottom: '24px', fontSize: '14px', textAlign: 'center' }}>
+          <div style={styles.errorBox}>
             {error}
           </div>
         )}
 
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px'}}>Username</label>
+            <label style={styles.label}>Username</label>
             <input 
               type="text" 
               value={username}
@@ -65,11 +99,12 @@ export default function LoginPage() {
               className="text-input"
               placeholder="Enter your username"
               style={{ width: '100%', boxSizing: 'border-box' }}
+              disabled={isLoading}
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>Password</label>
+            <label style={styles.label}>Password</label>
             <input 
               type="password" 
               value={password}
@@ -78,6 +113,7 @@ export default function LoginPage() {
               className="text-input"
               placeholder="Enter your password"
               style={{ width: '100%', boxSizing: 'border-box' }}
+              disabled={isLoading}
             />
           </div>
 
@@ -85,11 +121,15 @@ export default function LoginPage() {
             type="submit" 
             className="primary-button" 
             disabled={isLoading || !username.trim() || !password.trim()}
-            style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '12px' }}
+            style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '12px', height: '48px' }}
           >
-            {isLoading ? <Loader2 size={18} className="spin" /> : 'Log In'}
+            {isLoading ? <Loader2 size={18} className="spin" /> : 'Log In to Dashboard'}
           </button>
         </form>
+
+        <p style={{ marginTop: '32px', textAlign: 'center', fontSize: '12px', color: 'var(--color-text-muted)' }}>
+          Contact your administrator if you've forgotten your password.
+        </p>
       </div>
     </div>
   );
@@ -101,12 +141,47 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'var(--color-bg)',
+    backgroundColor: '#F9FAFB', // Light gray background
     padding: '24px',
   },
   card: {
     width: '100%',
-    maxWidth: '400px',
-    padding: '40px',
+    maxWidth: '420px',
+    padding: '48px 40px',
+    backgroundColor: 'white',
+    borderRadius: '16px',
+    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+  },
+  iconHeader: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '24px',
+  },
+  lockCircle: {
+    width: '56px',
+    height: '56px',
+    borderRadius: '50%',
+    backgroundColor: 'var(--color-primary-light)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: {
+    display: 'block',
+    fontSize: '13px',
+    fontWeight: '600',
+    marginBottom: '8px',
+    color: 'var(--color-text-main)',
+  },
+  errorBox: {
+    backgroundColor: '#FEF2F2',
+    color: '#DC2626',
+    padding: '12px',
+    borderRadius: '8px',
+    marginBottom: '24px',
+    fontSize: '14px',
+    textAlign: 'center',
+    border: '1px solid #FEE2E2',
+    fontWeight: '500',
   }
 };
