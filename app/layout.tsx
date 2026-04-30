@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import NextAuthProvider from "@/components/NextAuthProvider";
 
 export const metadata: Metadata = {
-  title: "AI Call Quality Analyzer | SalesGarners",
+  title: "AI Call Quality Analyzer | x-engage",
   description: "Industry-standard AI-powered call analysis.",
 };
 

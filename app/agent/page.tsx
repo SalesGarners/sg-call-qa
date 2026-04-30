@@ -19,7 +19,7 @@ export default function AgentPage() {
       </main>
 
       <footer style={{ marginTop: '80px', textAlign: 'center', fontSize: '12px', color: 'var(--color-text-muted)' }}>
-        <p>A product by SalesGarners</p>
+        <p>A product by x-engage</p>
       </footer>
     </div>
   );

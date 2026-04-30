@@ -42,7 +42,7 @@ export async function PATCH(
     const body = await req.json();
 
     const { 
-      transcript, verdict: rawVerdict, score, reasoning, status, aiProvider, addedBy,
+      transcript, verdict: rawVerdict, score, reasoning, status, aiProvider,
       intent, authority, demo_commitment, timeline, industry_fit, risk_level
     } = body;
 
@@ -77,8 +77,7 @@ export async function PATCH(
       industry_fit,
       risk_level,
       status: status || 'ANALYZED',
-      aiProvider: finalAiProvider,
-      addedBy
+      aiProvider: finalAiProvider
     });
 
     if (!updated) {
@@ -155,10 +154,10 @@ ${lead.transcript || 'N/A'}
         { name: '0-1/contact_employee_count', value: String(lead.employeeCount || '') },
         { name: '0-1/category', value: lead.category || '' },
         { name: '0-1/lead_source', value: 'Channel Partner' },
-        { name: '0-1/converting_asset', value: 'SalesGarner' },
+        { name: '0-1/converting_asset', value: 'x-engage' },
       ],
       context: {
-        pageUri: 'https://salesgarners.com/call-qa',
+        pageUri: 'https://x-engage.ai/call-qa',
         pageName: 'AI Call Quality Analyzer',
         ipAddress: req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1'
       },

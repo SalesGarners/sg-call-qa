@@ -161,7 +161,6 @@ export default function Home() {
           ...normalizedData,
           status: 'ANALYZED',
           aiProvider: selectedProvider,
-          addedBy: session?.user?.name || 'Unknown',
         }, { signal });
       } else {
         // CREATE new lead with all data
@@ -366,7 +365,7 @@ export default function Home() {
         </main>
 
         <footer style={{ marginTop: '80px', textAlign: 'center', fontSize: '12px', color: 'var(--color-text-muted)' }}>
-          <p>A product by SalesGarners</p>
+          <p>A product by x-engage</p>
         </footer>
       </div>
     </div>

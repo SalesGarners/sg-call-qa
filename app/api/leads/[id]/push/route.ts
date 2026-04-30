@@ -45,10 +45,10 @@ ${lead.transcript || 'N/A'}
         { objectTypeId: '0-1', name: 'contact_employee_count', value: lead.employeeCount },
         { objectTypeId: '0-1', name: 'category', value: lead.category },
         { objectTypeId: '0-1', name: 'lead_source', value: 'Channel Partner' },
-        { objectTypeId: '0-1', name: 'converting_asset', value: 'SalesGarner' },
+        { objectTypeId: '0-1', name: 'converting_asset', value: 'x-engage' },
       ],
       context: {
-        pageUri: 'https://salesgarners.com/call-qa',
+        pageUri: 'https://x-engage.ai/call-qa',
         pageName: 'AI Call Quality Analyzer',
       },
     };

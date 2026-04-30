@@ -16,15 +16,19 @@ export default function Navbar() {
       <div style={styles.inner}>
         {/* Logo */}
         <div style={styles.logoGroup}>
-          <a href='https://salesgarners.com/'>
-          <Image
-            src="/SalesGarners_Logo.webp"
-            alt="SalesGarners"
-            width={160}
-            height={36}
-            style={{ objectFit: 'contain', display: 'block' }}
-            priority
-          /></a>
+          <Link href="/" style={styles.logoLink}>
+            <Image
+              src="/x-engage_logo.webp"
+              alt="x-engage"
+              width={32}
+              height={32}
+              style={{ objectFit: 'contain' }}
+              priority
+            />
+            <span style={styles.logoText}>
+              <span style={{ color: 'var(--color-primary)' }}>x</span>-engage
+            </span>
+          </Link>
         </div>
 
         {/* Navigation + User Actions */}
@@ -104,6 +108,20 @@ const styles: Record<string, React.CSSProperties> = {
   logoGroup: {
     display: 'flex',
     alignItems: 'center',
+  },
+  logoLink: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    textDecoration: 'none',
+  },
+  logoText: {
+    fontFamily: 'var(--font-outfit)',
+    fontSize: '22px',
+    fontWeight: '800',
+    color: 'var(--color-text-main)',
+    letterSpacing: '-0.02em',
+    textTransform: 'lowercase',
   },
   navLink: {
     display: 'flex',

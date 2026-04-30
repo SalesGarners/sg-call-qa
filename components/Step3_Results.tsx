@@ -73,9 +73,10 @@ const Step3_Results: React.FC<Step3ResultsProps> = ({
 
   const metrics = [
     { name: 'Authority',       score: authority || 0,       max: 40, color: 'var(--color-primary)' },
-    { name: 'Intent',          score: intent || 0,          max: 30, color: 'var(--color-green)' },
+    { name: 'Intent',          score: intent || 0,          max: 25, color: 'var(--color-green)' },
     { name: 'Demo Commitment', score: demo_commitment || 0, max: 15, color: 'var(--color-amber)' },
-    { name: 'Industry Fit',    score: industry_fit || 0,    max: 15, color: '#6366f1' },
+    { name: 'Timeline',        score: timeline || 0,        max: 10, color: '#ec4899' },
+    { name: 'Industry Fit',    score: industry_fit || 0,    max: 10, color: '#6366f1' },
   ];
 
   // Calculate the total score from the breakdown to ensure consistency in the UI
