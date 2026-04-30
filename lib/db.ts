@@ -45,6 +45,13 @@ export const db = {
      * Update an existing lead
      */
     async update(id: string, data: Partial<{
+      firstName:      string;
+      lastName:       string;
+      email:          string;
+      phone:          string;
+      category:       string;
+      employeeCount:  string;
+      jobTitle:       string;
       transcript:     string;
       verdict:        string;
       score:          number;
@@ -92,6 +99,14 @@ export const db = {
       } catch (err) {
         return null;
       }
+    },
+
+    async findOne(filter: any) {
+      await dbConnect();
+      const lead = await Lead.findOne(filter);
+      if (!lead) return null;
+      const obj = lead.toObject();
+      return { ...obj, id: obj._id.toString() };
     },
 
     /**

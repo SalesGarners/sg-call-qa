@@ -131,9 +131,31 @@ export async function POST(req: Request) {
       hour12: true
     });
 
-    // 1. Create lead in DB
+    // 1. Check for existing lead to prevent duplicates (Upsert logic)
+    const normalizedEmail = email.toLowerCase().trim();
+    const existingLead = await db.lead.findOne({ email: normalizedEmail });
+
+    if (existingLead) {
+      console.log(`[Leads] Found existing lead for ${normalizedEmail}, updating instead of creating duplicate.`);
+      
+      const updated = await db.lead.update(existingLead.id, {
+        firstName, lastName, phone, category, employeeCount, jobTitle, 
+        transcript, verdict, score: finalScore, reasoning, 
+        intent, authority, demo_commitment, timeline, industry_fit, risk_level,
+        status: status || 'ANALYZED',
+        aiProvider: finalAiProvider,
+        // addedBy is EXPLICITLY OMITTED here to preserve the original creator
+      }) as any;
+
+      // Still trigger email verification if it wasn't done or if we want to refresh it
+      // (Optional: you could skip this if existingLead.emailStatus is already set)
+      
+      return NextResponse.json(updated);
+    }
+
+    // 2. Create new lead if it doesn't exist
     const lead = await db.lead.create({ 
-      firstName, lastName, email, phone, category, employeeCount, jobTitle, 
+      firstName, lastName, email: normalizedEmail, phone, category, employeeCount, jobTitle, 
       transcript, verdict, score: finalScore, reasoning, 
       intent, authority, demo_commitment, timeline, industry_fit, risk_level,
       status: status || 'ANALYZED',
