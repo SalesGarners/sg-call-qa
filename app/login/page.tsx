@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, Lock } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginForm() {
   const { data: session, status } = useSession();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -35,7 +35,6 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      // We use redirect: false to handle errors manually in the UI
       const res = await signIn('credentials', {
         redirect: false,
         username: username.trim(),
@@ -47,8 +46,6 @@ export default function LoginPage() {
         setError('Invalid username or password');
         setIsLoading(false);
       } else if (res?.ok) {
-        // Successful login - allow the useEffect above to handle redirection 
-        // OR trigger a hard refresh to be safe
         window.location.href = res.url || callbackUrl;
       }
     } catch (err) {
@@ -60,73 +57,86 @@ export default function LoginPage() {
 
   if (status === 'loading') {
     return (
-      <div style={styles.container}>
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
         <Loader2 size={32} className="spin" style={{ color: 'var(--color-primary)' }} />
       </div>
     );
   }
 
   return (
+    <>
+      <div style={styles.iconHeader}>
+        <div style={styles.lockCircle}>
+          <Lock size={24} color="var(--color-primary)" />
+        </div>
+      </div>
+      
+      <h2 className="outfit-font" style={{ textAlign: 'center', marginBottom: '12px', fontSize: '26px', fontWeight: '800', color: 'var(--color-text-main)' }}>
+        Welcome Back
+      </h2>
+      <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', marginBottom: '32px', fontSize: '14px' }}>
+        Please enter your credentials to access the platform.
+      </p>
+
+      {error && (
+        <div style={styles.errorBox}>
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div>
+          <label style={styles.label}>Username</label>
+          <input 
+            type="text" 
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+            className="text-input"
+            placeholder="Enter your username"
+            style={{ width: '100%', boxSizing: 'border-box' }}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div>
+          <label style={styles.label}>Password</label>
+          <input 
+            type="password" 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="text-input"
+            placeholder="Enter your password"
+            style={{ width: '100%', boxSizing: 'border-box' }}
+            disabled={isLoading}
+          />
+        </div>
+
+        <button 
+          type="submit" 
+          className="primary-button" 
+          disabled={isLoading || !username.trim() || !password.trim()}
+          style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '12px', height: '48px' }}
+        >
+          {isLoading ? <Loader2 size={18} className="spin" /> : 'Log In to Dashboard'}
+        </button>
+      </form>
+    </>
+  );
+}
+
+export default function LoginPage() {
+  return (
     <div style={styles.container}>
       <div className="card fade-in" style={styles.card}>
-        <div style={styles.iconHeader}>
-          <div style={styles.lockCircle}>
-            <Lock size={24} color="var(--color-primary)" />
+        <Suspense fallback={
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+            <Loader2 size={32} className="spin" style={{ color: 'var(--color-primary)' }} />
           </div>
-        </div>
-        
-        <h2 className="outfit-font" style={{ textAlign: 'center', marginBottom: '12px', fontSize: '26px', fontWeight: '800', color: 'var(--color-text-main)' }}>
-          Welcome Back
-        </h2>
-        <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', marginBottom: '32px', fontSize: '14px' }}>
-          Please enter your credentials to access the platform.
-        </p>
-
-        {error && (
-          <div style={styles.errorBox}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div>
-            <label style={styles.label}>Username</label>
-            <input 
-              type="text" 
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              className="text-input"
-              placeholder="Enter your username"
-              style={{ width: '100%', boxSizing: 'border-box' }}
-              disabled={isLoading}
-            />
-          </div>
-
-          <div>
-            <label style={styles.label}>Password</label>
-            <input 
-              type="password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="text-input"
-              placeholder="Enter your password"
-              style={{ width: '100%', boxSizing: 'border-box' }}
-              disabled={isLoading}
-            />
-          </div>
-
-          <button 
-            type="submit" 
-            className="primary-button" 
-            disabled={isLoading || !username.trim() || !password.trim()}
-            style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '12px', height: '48px' }}
-          >
-            {isLoading ? <Loader2 size={18} className="spin" /> : 'Log In to Dashboard'}
-          </button>
-        </form>
-
+        }>
+          <LoginForm />
+        </Suspense>
         <p style={{ marginTop: '32px', textAlign: 'center', fontSize: '12px', color: 'var(--color-text-muted)' }}>
           Contact your administrator if you've forgotten your password.
         </p>
