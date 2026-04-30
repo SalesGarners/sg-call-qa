@@ -116,6 +116,7 @@ export async function POST(req: Request) {
     const finalScore = calculatedScore > 0 ? calculatedScore : (Number(score) || 0);
 
     // Normalize AI provider
+    // Normalize AI provider
     const finalAiProvider = aiProvider || 'groq';
 
     // Record time in EST

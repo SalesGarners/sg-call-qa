@@ -66,7 +66,7 @@ export default function LeadDashboard({ onAnalyze, onViewDetails, refreshTrigger
     // Add data
     filteredLeads.forEach(lead => {
       worksheet.addRow({
-        date: lead.createdAtEST || new Date(lead.createdAt).toLocaleString(),
+        date: lead.createdAtEST || new Date(lead.createdAt).toLocaleString("en-US", {timeZone: "America/New_York"}),
         addedBy: lead.addedBy || '',
         firstName: lead.firstName,
         lastName: lead.lastName,
@@ -313,7 +313,7 @@ export default function LeadDashboard({ onAnalyze, onViewDetails, refreshTrigger
           <table style={styles.table}>
             <thead>
               <tr>
-                <th style={{ ...styles.th, width: '180px', minWidth: '180px', borderRight: '1px solid var(--color-border)' }}>Date (EST)</th>
+                <th style={{ ...styles.th, width: '180px', minWidth: '180px', borderRight: '1px solid var(--color-border)' }}>Date & Time (EST)</th>
                 <th style={{ ...styles.th, width: '150px', minWidth: '150px', borderRight: '1px solid var(--color-border)' }}>Agent</th>
                 <th style={{ ...styles.th, ...styles.stickyCol, left: 0, width: '200px', minWidth: '200px', borderRight: '1px solid var(--color-border)', zIndex: 11, backgroundColor: '#F9FAFB' }}>Lead Name</th>
                 <th style={{ ...styles.th, width: '160px', minWidth: '160px', borderRight: '1px solid var(--color-border)' }}>Phone</th>
@@ -329,7 +329,7 @@ export default function LeadDashboard({ onAnalyze, onViewDetails, refreshTrigger
               {filteredLeads.map((lead) => (
                 <tr key={lead.id} style={styles.tr}>
                   <td style={{ ...styles.td, borderRight: '1px solid var(--color-border)', fontSize: '12px' }}>
-                    {lead.createdAtEST || new Date(lead.createdAt).toLocaleDateString()}
+                    {lead.createdAtEST || new Date(lead.createdAt).toLocaleString("en-US", {timeZone: "America/New_York"})}
                   </td>
                   <td style={{ ...styles.td, borderRight: '1px solid var(--color-border)' }}>
                     <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-text-main)' }}>
